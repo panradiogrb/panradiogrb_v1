@@ -217,7 +217,7 @@ export async function createEntry(rawEntryData: FormData) {
             databaseErrors: "",
             subformErrors: subformErrors,
         }
-    } else {
+    } else if (validObservations.length > 0) {
         console.log("ALL DATA VALID - SEND DATA TO DB");
         // 3.1 Check if event already exists in database. Create new event if it doesn't exist
         let selectedEvent = await fetchSelectedEvent(rawEntryData.get('event')?.toString() ?? "");
@@ -289,7 +289,7 @@ export async function createEntry(rawEntryData: FormData) {
                     console.log(key)
                     console.log(fileNameWithoutExtension)
                     try {
-                        const s3Response = await getSignedURL(fitsFile,key)
+                        const s3Response = await getSignedURL(fitsFile, key)
                         console.log('File uploaded succesfully to S3 with: ', key)
                         try {
                             const createdImage = await prisma.images.create({
@@ -308,7 +308,7 @@ export async function createEntry(rawEntryData: FormData) {
                                 subformErrors: subformErrors,
                             };
                         }
-                    } catch (error){
+                    } catch (error) {
                         console.error("Error uploading file to S3")
                         return {
                             success: false,
@@ -329,6 +329,19 @@ export async function createEntry(rawEntryData: FormData) {
         // 3.5 After uploading new event and/or observation records to database, revalidate corresponding event pages cache to load new event data, and redirect user
         revalidatePath(`/dashboard/graph/${selectedEvent.name}`);
         redirect(`/dashboard/graph/${selectedEvent.name}`);
+    } else {
+
+        subformErrors.push({
+            subformId: 0,    // Hard coded subform id to 0, because subform error doesn't relate to a specific observaiton form, but the entry form as a whole
+            field: 'Invalid number of observation forms',
+            message: 'Valid entries for an event must contain at least 1 filled out observation form.'
+        })
+
+        return {
+            success: false,
+            databaseErrors: ``,
+            subformErrors: subformErrors,
+        }
     }
 }
 
@@ -493,9 +506,9 @@ export async function updateObservation(id: number, rawObservationData: FormData
                 console.log('Provided Fits file in update form: ' + updateFitsFileObject.name);
                 console.log('Current assigned Fits file to observation that was updated: ' + oldImage?.file_name);
                 // If provided File object name is null, dont update anything
-                if(updateFitsFileObject.name !== 'undefined'){
+                if (updateFitsFileObject.name !== 'undefined') {
                     //console.log("Real file here")
-                    if(oldImage === null){
+                    if (oldImage === null) {
                         console.log("Old file null just upload new file")
                         const fileNameParts = updateFitsFileObject.name.split('.');
                         const fileNameWithoutExtension = fileNameParts[0];
@@ -507,7 +520,7 @@ export async function updateObservation(id: number, rawObservationData: FormData
                         console.log(key)
                         console.log("Uploading file and creating new image entry", updateFitsFileObject.name)
                         try {
-                            const s3Response = await getSignedURL(updateFitsFile,key)
+                            const s3Response = await getSignedURL(updateFitsFile, key)
                             console.log('File uploaded succesfully to S3 with: ', key)
                             try {
                                 const createdImage = await prisma.images.create({
@@ -526,7 +539,7 @@ export async function updateObservation(id: number, rawObservationData: FormData
                                     subformErrors: subformErrors,
                                 };
                             }
-                        } catch (error){
+                        } catch (error) {
                             console.error("Error uploading file to S3")
                             return {
                                 success: false,
@@ -534,9 +547,9 @@ export async function updateObservation(id: number, rawObservationData: FormData
                                 subformErrors: subformErrors,
                             }
                         }
-                    
-                    //If file names are DIFFERNT then make changes and update, if the same do nothing again
-                    }else if (updateFitsFileObject.name !== oldImage?.file_name){
+
+                        //If file names are DIFFERNT then make changes and update, if the same do nothing again
+                    } else if (updateFitsFileObject.name !== oldImage?.file_name) {
                         console.log("Files have differnt names make changes")
                         const fileNameParts = updateFitsFileObject.name.split('.');
                         const fileNameWithoutExtension = fileNameParts[0];
@@ -546,18 +559,19 @@ export async function updateObservation(id: number, rawObservationData: FormData
                         const newKey = `${fileNameWithoutExtension}_${Key2}.fits`;
                         console.log(fileNameWithoutExtension)
                         console.log(newKey)
-                        
+
                         try {
                             //Delete file first from S3
                             await deleteFile(oldImage.key);
                             console.log("old file deleted from S3", oldImage.key)
                             //Now upload the new File with new Key
-                            const s3response = await getSignedURL(updateFitsFile,newKey)
+                            const s3response = await getSignedURL(updateFitsFile, newKey)
                             console.log('File uploaded succesfully to S3 with: ', newKey)
 
                             //Now UPDATE the images table with new file name and new key
                             const updatedImage = await prisma.images.update({
-                                where: { image_id: oldImage.image_id       
+                                where: {
+                                    image_id: oldImage.image_id
                                 },
                                 data: {
                                     key: newKey,
@@ -571,7 +585,7 @@ export async function updateObservation(id: number, rawObservationData: FormData
                         }
 
                     }
-                    
+
                 }
 
                 // If provided File object name is not null, and is not the same as oldImage.file_name, then delete oldImage from S3, Upload updateFitsFileObject, and update old image record key with new key using 'oldImage?.observation_id' in prisma call
@@ -613,7 +627,7 @@ export async function deleteEvent(eventToDelete: string, rawDeleteEventData: For
         const image = await fetchImageById(o.observation_id);
         //console.log(`Observation Image: ${index} - ${image}`);
         //delete if image exists
-        if (image){
+        if (image) {
             console.log(`image to delete, ${image} ${image.key}`);
             try {
                 await deleteFile(image.key);
