@@ -1,0 +1,3 @@
+// REGEX EXPRESSIONS FOR INPUT VALIDATIONS
+export const eventNameRegex: RegExp = /^\d{6}[A-Z]+$/;                 // Checks if GRB Event Name string follows the format of 6 consecutive digits + any sequence of capitals letters (e.g. 240401, 240401A, 240401AB, 240401ABC)
+export const utcRegex: RegExp = /^(?:2[0-3]|[01][0-9]):[0-5][0-9]$/;   // Checks if GRB Event Time follows the UTC Time Format (HH:MM) for 24 time

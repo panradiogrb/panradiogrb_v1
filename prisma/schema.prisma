@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model events {
+  name         String         @id @db.VarChar(255)
+  date         DateTime       @db.Timestamp(6)
+  creator      String         @db.VarChar(255)
+  observations observations[]
+}
+
+model images {
+  image_id       Int          @id @default(autoincrement())
+  observation_id Int
+  key            String       @db.VarChar(255)
+  file_name      String?      @db.VarChar(255)
+  observations   observations @relation(fields: [observation_id], references: [observation_id], onDelete: Cascade)
+}
+
+model observations {
+  observation_id Int      @id @default(autoincrement())
+  parent         String   @db.VarChar(255)
+  time           DateTime @db.Timestamp(6)
+  endtime        DateTime @db.Timestamp(6)
+  duration       Decimal  @db.Decimal
+  frequency      Decimal  @db.Decimal
+  bandwidth      Decimal  @db.Decimal
+  configuration  String   @db.VarChar(255)
+  detection      Boolean
+  flux           Decimal  @db.Decimal
+  fluxerror      Decimal  @db.Decimal
+  rms            Decimal  @db.Decimal
+  notes          String
+  observer       String   @db.VarChar(255)
+  burstadvocate  String   @db.VarChar(255)
+  username       String   @db.VarChar(255)
+  ra             String   @db.VarChar(255)
+  dec            String   @db.VarChar(255)
+  poser          Decimal  @db.Decimal
+  fits           String?
+  data_processor String?  @db.VarChar(255)
+  images         images[]
+  events         events   @relation(fields: [parent], references: [name], onDelete: Cascade, map: "fk_events")
+}
+
+model postimages {
+  image_id String @id @db.VarChar(255)
+}
+
+enum user_role {
+  admin
+  researcher
+  guest
+}
