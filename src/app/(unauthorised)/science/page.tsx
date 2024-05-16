@@ -24,7 +24,6 @@ export default async function Home() {
                                     <p className='text-sm scale-90 opacity-85'>{post.date}</p>
                                     <p className='text-base'>{post.description}</p>
                                 </div>
-                                <Image className='rounded' src={'/posts/' + post.slug + '.jpg'} width={200} height={200} alt={post.title + ' alt'}></Image>
                             </Link>
                         </article>
                     ))}
