@@ -344,7 +344,6 @@ export async function createEntry(rawEntryData: FormData) {
             databaseErrors: ``,
             subformErrors: subformErrors,
         }
-    }
 }
 
 /****************************************************************************************************************************************
