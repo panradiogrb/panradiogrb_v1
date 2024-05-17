@@ -10,7 +10,7 @@ const nextConfig = {
 };
 
 const withMDX = createMDX({
-    //Markdown plugins go here
+    //withMDX is used to allow the project to read .mdx files for the blog system
 })
 
 export default withMDX(nextConfig);

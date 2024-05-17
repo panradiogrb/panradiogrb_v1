@@ -185,16 +185,27 @@ export function GetLineGraphOptions(event: GammaEvent): ChartOptions {
             y: {
                 title: {
                     display: true,
-                    text: "Flux Density (mJy)",
+                    text: "Flux Density (µJy)",
                 },
                 ticks: {
                     //Quote correct units in ticks
                     callback: function (value, index, ticks) {
-                        if(value.toString().split('.')[0] !== value.toString()){
+                        if (value.toString().split('.')[0] !== value.toString()) {
                             return '';
                         }
+                        if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
+                            console.log("was a number and power of 10: ",value);
+                            return value;
+                        }
 
-                        return value;   //save this for if we need to add the 'value ^ 1' stuff from figma example
+                        if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
+                            console.log("was a string and power of 10: ",value);
+                            return value;
+                        }
+
+                        console.log('was not a power of 10: ', value)
+
+                        return ;  
                     }
                 },
                 type: 'logarithmic' as const,
@@ -202,6 +213,27 @@ export function GetLineGraphOptions(event: GammaEvent): ChartOptions {
                 min: 0,
             },
             x: {
+                ticks: {
+                    //Quote correct units in ticks
+                    callback: function (value, index, ticks) {
+                        if (value.toString().split('.')[0] !== value.toString()) {
+                            return '';
+                        }
+                        if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
+                            console.log("was a number and power of 10: ",value);
+                            return value;
+                        }
+
+                        if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
+                            console.log("was a string and power of 10: ",value);
+                            return value;
+                        }
+
+                        console.log('was not a power of 10: ', value)
+
+                        return '';  
+                    }
+                },
                 title: {
                     display: true,
                     text: "Time After Discovery (h)",
@@ -233,7 +265,7 @@ export function GetFluxFreqGraphData(event: GammaEvent): ChartData<"lineWithErro
     let allData: ChartData<"lineWithErrorBars", (number | Point | null)[], unknown> = {
         datasets: [
             {
-                label:'Flux vs Frequency',
+                label: 'Flux vs Frequency',
                 data: []
             }
         ]
@@ -267,7 +299,7 @@ export function GetFluxFreqGraphData(event: GammaEvent): ChartData<"lineWithErro
     ------
     The options for the Flux/Freq graph.
 
-    Display the titles for the axis (x - Frequency (GHz), y - Flux Density (mJy)).
+    Display the titles for the axis (x - Frequency (GHz), y - Flux Density (µJy)).
     Get the proper scale (logarithmic).
     Set the colours as needed.
 */
@@ -293,16 +325,27 @@ export function GetFluxFreqGraphOptions(event: GammaEvent): ChartOptions {
             y: {
                 title: {
                     display: true,
-                    text: "Flux Density (mJy)",
+                    text: "Flux Density (µJy)",
                 },
                 ticks: {
                     //Quote correct units in ticks
                     callback: function (value, index, ticks) {
-                        if(value.toString().split('.')[0] !== value.toString()){
+                        if (value.toString().split('.')[0] !== value.toString()) {
                             return '';
                         }
+                        if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
+                            console.log("was a number and power of 10: ",value);
+                            return value;
+                        }
 
-                        return value;   //save this for if we need to add the 'value ^ 1' stuff from figma example
+                        if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
+                            console.log("was a string and power of 10: ",value);
+                            return value;
+                        }
+
+                        console.log('was not a power of 10: ', value)
+
+                        return value;  
                     }
                 },
                 type: 'logarithmic',
@@ -310,6 +353,27 @@ export function GetFluxFreqGraphOptions(event: GammaEvent): ChartOptions {
                 min: 0,
             },
             x: {
+                ticks: {
+                    //Quote correct units in ticks
+                    callback: function (value, index, ticks) {
+                        if (value.toString().split('.')[0] !== value.toString()) {
+                            return '';
+                        }
+                        if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
+                            console.log("was a number and power of 10: ",value);
+                            return value;
+                        }
+
+                        if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
+                            console.log("was a string and power of 10: ",value);
+                            return value;
+                        }
+
+                        console.log('was not a power of 10: ', value)
+
+                        return value;  
+                    }
+                },
                 title: {
                     display: true,
                     text: "Frequency (GHz)",

@@ -317,7 +317,7 @@ const ObservationForm = ({ index, isChecked, handleCheck, updateObservations, fo
                         <label
                             className="font-bold text-gray-800 mx-8"
                             htmlFor="flux density">
-                            Flux Density (mJy):
+                            Flux Density (µJy):
                         </label>
                         <input
                             type="text"
@@ -333,7 +333,7 @@ const ObservationForm = ({ index, isChecked, handleCheck, updateObservations, fo
                         <label
                             className="font-bold text-gray-800 mx-8"
                             htmlFor="uncertainty">
-                            Flux Density Error (mJy):
+                            Flux Density Error (µJy):
                         </label>
                         <input
                             type="text"
@@ -355,7 +355,7 @@ const ObservationForm = ({ index, isChecked, handleCheck, updateObservations, fo
                         <label
                             className="font-bold text-gray-800 mx-8"
                             htmlFor="rms">
-                            RMS (mJy):
+                            RMS (µJy):
                         </label>
                         <input
                             type="text"

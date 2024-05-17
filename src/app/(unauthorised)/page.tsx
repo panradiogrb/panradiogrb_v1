@@ -11,25 +11,25 @@ export default function Home() {
   let height: number = 300;
 
   return (
-    <main className='bg-gradient-to-t to-black via-black from-home-purple w-full min-h-full flex flex-col'>
+    <main className='bg-gradient-to-t to-black via-black from-home-purple w-full min-h-screen flex flex-col'>
 
       <div className='flex justify-center w-full'>
+
         <Image
-          className='pb-9 pt-5 z-10'
+          className=' z-10 translate-y-28 max-h-[15.5rem] w-full'
+          src={"/upscaledbanner.png"}
+          alt={""}
+          fill={true}
+          objectFit="cover"
+        >
+        </Image>
+        <Image
+          className='pb-9 pt-5 scale-0 '
           src={"/panradio-logo.png"}
           alt={""}
           width={width}
           height={25}
         >
-        </Image>
-        <Image
-          className='absolute opacity-60 translate-y-28 max-h-[15.5rem] w-full'
-          src={"/grb-burst.webp"}
-          alt={""}
-          fill={true}
-          objectFit="cover"
-        >
-
         </Image>
       </div>
 

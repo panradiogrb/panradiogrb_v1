@@ -224,7 +224,7 @@ export const researcherColumns: ColumnDef<Observation>[] = [
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() == 'asc')}
                 >
-                    Flux Density (mJy)
+                    Flux Density (µJy)
                     <TiArrowUnsorted className="ml-2 h-4 w-4"></TiArrowUnsorted>
                 </Button>
             )
@@ -239,7 +239,7 @@ export const researcherColumns: ColumnDef<Observation>[] = [
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() == 'asc')}
                 >
-                    Flux Density Error (mJy)
+                    Flux Density Error (µJy)
                     <TiArrowUnsorted className="ml-2 h-4 w-4"></TiArrowUnsorted>
                 </Button>
             )
@@ -254,7 +254,7 @@ export const researcherColumns: ColumnDef<Observation>[] = [
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() == 'asc')}
                 >
-                    RMS (mJy)
+                    RMS (µJy)
                     <TiArrowUnsorted className="ml-2 h-4 w-4"></TiArrowUnsorted>
                 </Button>
             )
@@ -505,7 +505,7 @@ export const colleagueColumns: ColumnDef<Observation>[] = [
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() == 'asc')}
                 >
-                    Flux Density (mJy)
+                    Flux Density (µJy)
                     <TiArrowUnsorted className="ml-2 h-4 w-4"></TiArrowUnsorted>
                 </Button>
             )

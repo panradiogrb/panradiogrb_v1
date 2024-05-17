@@ -125,7 +125,7 @@ const Member = ({ index }: { index: number }) => {
                 <h2><span className='text-lg font-bold text-space-purple'>Name:</span> {member.name}</h2>
                 <h2><span className='text-lg font-bold text-space-purple'>Institute:</span> {member.institute}</h2>
                 <h2><span className='text-lg font-bold text-space-purple'>Email:</span> <a className='hover:text-violet-400' href={`mailto:${member.email}`}>{member.email}</a></h2>
-                <h2><span className='text-lg font-bold text-space-purple'>Website:</span> {member.website}</h2>
+                {/* <h2><span className='text-lg font-bold text-space-purple'>Website:</span> {member.website}</h2> */}
             </section>
         </div>
     );

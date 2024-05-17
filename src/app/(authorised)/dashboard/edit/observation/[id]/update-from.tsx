@@ -402,7 +402,7 @@ const UpdateObservation = ({ oldObservation }: { oldObservation: Observation }):
                                 <label
                                     className="font-bold text-gray-800 mx-8"
                                     htmlFor="flux density">
-                                    Flux Density (mJy):
+                                    Flux Density (µJy):
                                 </label>
                             </li>
                             <div className=' hover:drop-shadow-md'>
@@ -428,7 +428,7 @@ const UpdateObservation = ({ oldObservation }: { oldObservation: Observation }):
                                 <label
                                     className="font-bold text-gray-800 mx-8"
                                     htmlFor="uncertainty">
-                                    Flux Density Error (mJy):
+                                    Flux Density Error (µJy):
                                 </label>
                             </li>
                             <div className=' hover:drop-shadow-md'>
@@ -462,7 +462,7 @@ const UpdateObservation = ({ oldObservation }: { oldObservation: Observation }):
                         <label
                             className="font-bold text-gray-800 mx-8"
                             htmlFor="rms">
-                            RMS (mJy):
+                            RMS (µJy):
                         </label>
                         <div className=' hover:drop-shadow-md'>
 
