@@ -14,6 +14,7 @@ import { fetchSelectedEvent, fetchSelectedObservations } from "@/lib/data";
 import EventButtons from "./eventButtons";
 import readUserSession from "@/lib/auth";
 import { getUserRole } from "@/lib/authActions/actions";
+import { CalculateDuration } from "@/lib/form-helpers";
 
 export default async function Graph({ params }: { params: { event: string } }) {
   /****************************************************************
@@ -46,13 +47,21 @@ export default async function Graph({ params }: { params: { event: string } }) {
       creator: selectedEvent.creator,
       observations: selectedObservations.map((o) => {
         // Map over each 'selectedObservation' object, and create a corresponding 'Observation' type object to be returned into GammaEvent observations array field
+
+        let placeholderEndDate: Date = new Date(o.time);
+        placeholderEndDate.setHours(placeholderEndDate.getHours() + 12);
+
+        // console.log('\n');
+        // console.log(`Observation Start Time: ${o.time.toString()}`)
+        // console.log(`Modified Observation End Time: ${placeholderEndDate.toString()}`)
+
         const observation: Observation = {
           id: o.observation_id,
           parent: o.parent,
           time: o.time,
-          endTime: o.endtime,
+          endTime: o.endtime === null ? placeholderEndDate : o.endtime,
           detection: o.detection,
-          duration: parseFloat(o.duration.toString()),
+          duration: o.endtime === null || o.duration.toNumber() === -1 ? CalculateDuration(o.time, placeholderEndDate) : parseFloat(o.duration.toString()),
           RMS: parseFloat(o.rms.toString()),
           frequency: parseFloat(o.frequency.toString()),
           flux: parseFloat(o.flux.toString()),
@@ -102,14 +111,12 @@ export default async function Graph({ params }: { params: { event: string } }) {
     To do this, they must all be client components. So, I'll have this client component be passed the information for
     the graph and tables from the server component in the page.tsx file here. That way we can use await and asynchrously
     retrieve the data.
-
-    this has been done, documentation to follow - 15/04/2024
   */
 
   return (
     <main className="bg-custom-image2 bg-no-repeat bg-cover bg-center bg-fixed flex flex-row w-full h-max">
 
-      <div className="h-full mx-8 flex-1 z-10 flex flex-col">
+      <div className="h-full px-4 flex-1 z-10 flex flex-col">
         <h1 className="text-3xl font-base mb-5 mt-8 flex text-white items-center gap-x-5">
           <BsGraphUp size={40} className="rounded-md border-2 border-solid border-white text-white p-2"></BsGraphUp>{selectedGammaEvent.name}
         </h1>

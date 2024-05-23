@@ -1,5 +1,5 @@
 import { Observation } from "@/components/objects/event";
-import { ObservationFormType } from "../app/(authorised)/dashboard/entry/entry-form";
+import { ObservationFormType } from "@/components/forms/create/observation-form";
 import { Prisma } from '@prisma/client'
 
 export function GetEarliestDate(observations: any[]) {
@@ -134,6 +134,31 @@ export function CalculateDurationDecimal(startTime: Date, endTime: Date): Prisma
     let time: Prisma.Decimal = new Prisma.Decimal(Math.abs(endTime.getTime() - startTime.getTime()) / 1000);
 
     return time;
+}
+
+/**************************************************************************************************************************************************
+ * METHOD: GetLocalDateFromString
+ * - Retrieves a string in the format [DD/MM/YY] and returns a Date object containing the date values
+ * - Purpose is to easily convert a date string into it's corresponding date object
+ **************************************************************************************************************************************************/
+export function GetDateNoTimeFromString(dateString: string): Date | null {
+    // 1. Split the date string into day, month and year values
+    const [day, month, year] = dateString.split('/').map(Number);
+
+    // 2. Check if the date components are valid, and return null if invalid
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 0) {
+        return null;
+    }
+
+    // 3. Create and return a new Date object (month needs to have -1 subtracted because javascript date objects are index 0 based)
+    const date = new Date(year, month - 1, day);
+
+    // // 4. Check if the newly created date is valid
+    // if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    //     return null;
+    // }
+
+    return date;
 }
 
 /**************************************************************************************************************************************************

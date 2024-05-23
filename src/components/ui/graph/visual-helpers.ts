@@ -1,12 +1,11 @@
 import { GammaEvent, Observation } from "@/components/objects/event";
-import { ChartData, Point, ChartDataset, ChartOptions } from "chart.js/auto";
+import { ChartData, Point, ChartDataset, ChartOptions, ScriptableLineSegmentContext } from "chart.js/auto";
+import { PointWithErrorBar } from "chartjs-chart-error-bars";
 import { max } from "date-fns";
 
 /*
     visual-helpers.ts
     --------
-    Added late so may not be fully fleshed out.
-
     This file holders helper functions called by the graph visual components.
 */
 
@@ -86,9 +85,10 @@ export function GetLineGraphData(event: GammaEvent): ChartData<"lineWithErrorBar
             //Calculate the time from the original event
             let time: number = event.date.getTime();
             //x will be the difference between the 2 events, converted to hours. Converted by dividing milliseconds by 3.6 mil
-            let x: number = (freqBands[i][k].time.getTime() - time) / 3600000;  //maybe need error checking here to make sure negative numbers arent here
-            let y: number = freqBands[i][k].flux;   //y value just the flux reading
-            let yMin: number = freqBands[i][k].flux - freqBands[i][k].fluxError;
+            let x: number = (freqBands[i][k].time.getTime() - time) / 3600000 / 24; // days
+            let y: number = freqBands[i][k].flux;                                   // flux reading
+            let yMin: number = freqBands[i][k].flux - freqBands[i][k].fluxError;    // minimum flux
+            if (yMin <= 0) { yMin = 0 } //prevent min being less than 0 so error bars display properly
             let yMax: number = freqBands[i][k].flux + freqBands[i][k].fluxError;
 
             //Assign the values
@@ -101,10 +101,15 @@ export function GetLineGraphData(event: GammaEvent): ChartData<"lineWithErrorBar
             data.push(t);   //Put the new point object onto the data object
         }
 
+        const skipped = (ctx: ScriptableLineSegmentContext, value: number[]) => ctx.p0.skip || ctx.p1.skip ? value : undefined;
+
         //Push the new data input
         sets.push({
             label: (freqBands[i][0].frequency.toString() + "GHz"),
             data: data,
+            segment: {
+                borderDash: ctx => skipped(ctx, [4, 4]),
+            }
         });
 
         //Reset the data object
@@ -164,8 +169,8 @@ export function GetLineGraphData(event: GammaEvent): ChartData<"lineWithErrorBar
     return allData;
 }
 
-export function GetLineGraphOptions(event: GammaEvent): ChartOptions {
-    const options: ChartOptions = {
+export function GetLineGraphOptions(event: GammaEvent, showLine: boolean, showErrorBars: boolean): ChartOptions {
+    const options: ChartOptions<'lineWithErrorBars'> = {
         plugins: {
             title: {
                 display: true,
@@ -176,10 +181,31 @@ export function GetLineGraphOptions(event: GammaEvent): ChartOptions {
             },
             colors: {
                 forceOverride: true,
+            },
+            // zoom: {
+            //     pan: {
+            //         enabled: true,
+            //         modifierKey: 'ctrl',
+            //     },
+            //     zoom: {
+            //         drag: {
+            //             enabled: true
+            //         },
+            //         mode: 'xy',
+            //     },
+            // },
+        },
+        datasets: {
+            lineWithErrorBars: {
+                errorBarLineWidth: 0.5,
+                errorBarWhiskerLineWidth: 0.5,
+                //this is where styling for the error whiskers can go
             }
         },
         responsive: true,
         maintainAspectRatio: false,
+        showLine: showLine,
+        spanGaps: true,
         scales:
         {
             y: {
@@ -194,23 +220,22 @@ export function GetLineGraphOptions(event: GammaEvent): ChartOptions {
                             return '';
                         }
                         if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
-                            console.log("was a number and power of 10: ",value);
                             return value;
                         }
 
                         if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
-                            console.log("was a string and power of 10: ",value);
                             return value;
                         }
 
-                        console.log('was not a power of 10: ', value)
-
-                        return ;  
+                        return;
                     }
                 },
                 type: 'logarithmic' as const,
                 display: true,
                 min: 0,
+                grid: {
+                    color: "rgba(0, 0, 0, 0)",
+                },
             },
             x: {
                 ticks: {
@@ -220,28 +245,26 @@ export function GetLineGraphOptions(event: GammaEvent): ChartOptions {
                             return '';
                         }
                         if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
-                            console.log("was a number and power of 10: ",value);
                             return value;
                         }
 
                         if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
-                            console.log("was a string and power of 10: ",value);
                             return value;
                         }
 
-                        console.log('was not a power of 10: ', value)
-
-                        return '';  
+                        return '';
                     }
                 },
                 title: {
                     display: true,
-                    text: "Time After Discovery (h)",
+                    text: "Time After Discovery (days)",
                 },
                 type: 'logarithmic' as const,
                 display: true,
                 min: 0,
-                //maybe calc max based on max value in the graph + a certain buffer amount?
+                grid: {
+                    color: "rgba(0, 0, 0, 0)",
+                },
             },
         }
     }
@@ -263,25 +286,79 @@ export function GetFluxFreqGraphData(event: GammaEvent): ChartData<"lineWithErro
 
     //Create the ChartData object
     let allData: ChartData<"lineWithErrorBars", (number | Point | null)[], unknown> = {
-        datasets: [
-            {
-                label: 'Flux vs Frequency',
-                data: []
-            }
-        ]
+        datasets: []
     };
 
-    //Loop through all the observations passed and add their data to the dataset's data
-    event.observations.forEach((obs) => {
-        allData.datasets[0].data.push(
-            {
-                x: obs.frequency,
-                y: obs.flux,
-                yMin: obs.flux - obs.fluxError,
-                yMax: obs.flux + obs.fluxError,
+    const observations = event.observations;
+
+    let timeEpochs: Observation[][] = [];
+    let dataSets: ChartDataset<"lineWithErrorBars", (number | Point | null)[]>[] = [];
+
+    //Store all the observations in an array of subarrays grouped by if they overlap
+    //Check if they overlap by first seeing if they are on the first day, and then if not then run the 'IsOverlapping' command.
+    for (let i: number = 0; i < event.observations.length; i++) {
+        //Check the next observation's time
+
+        //wasAdded checks to see if it actually gets added to a list
+        let wasAdded: boolean = false;
+
+        //Check if the current start or end time is already in an epoch
+        timeEpochs.forEach((observationsList) => {
+            //Check if the first element has any overlap with the current observation being checked
+            // if (DateToString(observationsList[0].time) === currentStartTime || DateToString(observationsList[0].time) === currentEndTime || DateToString(observationsList[0].endTime) === currentStartTime || DateToString(observationsList[0].endTime) === currentEndTime){
+            if (IsOverlapping(observationsList[0], observations[i])) {
+                //it does, add it to the current list
+                observationsList.push(observations[i]); //fuck why am i using forEach and regular for loops ;-; old code meet new code i guess lol
+                wasAdded = true;    //update was added so it doesn't create a duplicate epoch list
             }
-        )
+        })
+
+        //At this point, the observation wasn't in any list already so it must be added as the only entry in a new list
+        if (!wasAdded) {
+            timeEpochs.push([observations[i]])
+        }
+
+    }
+
+
+    timeEpochs.sort((a, b) => a[0].time.getTime() - b[0].time.getTime());
+
+
+    //Loop through all the epochs and construct datasets with their values
+    timeEpochs.forEach((observationsList) => {
+        let data: Point[] = [];
+        observationsList.forEach((observation) => {
+            //Calculate the x, y, yMin & yMax values for the current data
+            const x: number = observation.frequency;
+            const y: number = observation.flux;
+            const yMin: number = observation.flux - observation.fluxError < 0 ? 0 : observation.flux - observation.fluxError;
+            const yMax: number = observation.flux + observation.fluxError;
+
+            //Construct a point with the calculated data
+            let t: PointWithErrorBar = {
+                x: x,
+                y: y,
+                yMax: yMax,
+                yMin: yMin,
+            }
+
+            //Put that calculated data onto the data array
+            data.push(t);
+        })
+
+        //At this point, all the observations for this day have been gone through. I need to construct the label for the set & pass it to the datasets array
+        if (observationsList.length > 0) {
+            dataSets.push({
+                label: "Epoch: " + DateToString(observationsList[0].time),
+                data: data,
+            });
+        }
+
+        //Reset the data object (unecessary in this code as I declare it in the for loop but just incase I use it again)
+        data = [];
     })
+
+    allData.datasets = dataSets;
 
     //Sort the datasets within the sets based on X value (so earlier events appear first when connecting lines on graph)
     //This is done on the other graph too and should be its own function but is not because :D 
@@ -312,11 +389,23 @@ export function GetFluxFreqGraphOptions(event: GammaEvent): ChartOptions {
             },
             legend: {
                 position: "bottom",
-                display: false,
+                display: true,
             },
             colors: {
                 forceOverride: true,
-            }
+            },
+            // zoom: {
+            //     pan: {
+            //         enabled: true,
+            //         modifierKey: 'ctrl',
+            //     },
+            //     zoom: {
+            //         drag: {
+            //             enabled: true
+            //         },
+            //         mode: 'xy',
+            //     },
+            // },
         },
         responsive: true,
         maintainAspectRatio: false,
@@ -334,44 +423,28 @@ export function GetFluxFreqGraphOptions(event: GammaEvent): ChartOptions {
                             return '';
                         }
                         if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
-                            console.log("was a number and power of 10: ",value);
                             return value;
                         }
 
                         if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
-                            console.log("was a string and power of 10: ",value);
                             return value;
                         }
 
-                        console.log('was not a power of 10: ', value)
-
-                        return value;  
+                        return;
                     }
                 },
                 type: 'logarithmic',
                 display: true,
                 min: 0,
+                grid: {
+                    color: "rgba(0, 0, 0, 0)",
+                },
             },
             x: {
                 ticks: {
                     //Quote correct units in ticks
                     callback: function (value, index, ticks) {
-                        if (value.toString().split('.')[0] !== value.toString()) {
-                            return '';
-                        }
-                        if (typeof value === 'number' && Math.log10(Math.round(value)) % 1 === 0) {
-                            console.log("was a number and power of 10: ",value);
-                            return value;
-                        }
-
-                        if (typeof value === 'string' && Math.log10(Math.round(parseInt(value))) % 1 === 0) {
-                            console.log("was a string and power of 10: ",value);
-                            return value;
-                        }
-
-                        console.log('was not a power of 10: ', value)
-
-                        return value;  
+                        return value;
                     }
                 },
                 title: {
@@ -380,10 +453,12 @@ export function GetFluxFreqGraphOptions(event: GammaEvent): ChartOptions {
                 },
                 type: 'logarithmic',
                 display: true,
-                min: 0,
-                //maybe calc max based on max value in the graph + a certain buffer amount?
+                // min: 4,
+                grid: {
+                    color: "rgba(0, 0, 0, 0)",
+                },
             },
-        }
+        },
     }
 
     return options;
@@ -441,3 +516,53 @@ export function DateToString(date: Date): string {
 
     return dateString;
 }
+
+/*
+    IsOverlapping
+    -------
+    This function returns true if the 2 given Observations are overlapping in terms of date, and false if not.
+*/
+export function IsOverlapping(one: Observation, two: Observation): boolean {
+    let isOverlaping = false;
+
+    //surely best way to check is get the start time of obs two and see if it is >= to one's start time & <= to one's end
+    //then check if the same but reverse one & two
+
+    const oneStart: number = one.time.getTime();
+    const twoStart: number = two.time.getTime();
+    const oneEnd: number = one.endTime.getTime();
+    const twoEnd: number = two.endTime.getTime();
+
+    if (twoStart >= oneStart && twoStart <= oneEnd) {
+        isOverlaping = true;
+    }
+
+    if (oneStart >= twoStart && oneStart <= twoEnd) {
+        isOverlaping = true;
+    }
+
+
+
+
+
+    // check if dates overlap
+    // they overlap if one of their start times is during the overall period of the other
+    // if (two start time - one start time < one end time - one start time) = if(how long after one did two start < how long did one run for)
+    // //check if two occured during one
+    // if (two.time.getTime() - one.time.getTime() < one.endTime.getTime() - one.time.getTime()) {
+    //     isOverlaping = true;
+    // }
+
+    // //check if one occured during two
+    // if (one.time.getTime() - two.time.getTime() < two.endTime.getTime() - two.time.getTime()) {
+    //     isOverlaping = true;
+    // }
+
+    //something unpleasant is going on above as it always assumes to be true
+
+    return isOverlaping;
+}
+
+
+//This type is used for assigning the layout to the graph visuals. h for horizontal and v for vertical
+export type layout = ('v' | 'h');

@@ -1,29 +1,125 @@
 'use client'
 
-import Chart, { ChartConfiguration, ChartData, ChartOptions, Point } from "chart.js/auto";
-import { use, useEffect, useMemo, useRef } from "react"
+import Chart, { ChartConfiguration, ChartData, ChartDataset, ChartOptions, Point } from "chart.js/auto";
+import { use, useEffect, useMemo, useRef, useState } from "react"
 import 'chartjs-chart-error-bars'
 import 'chart.js/auto';
 import { LineWithErrorBarsChart } from 'chartjs-chart-error-bars';
 import { Button } from "../button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import { HiDotsHorizontal } from "react-icons/hi";
+import zoomPlugin from 'chartjs-plugin-zoom';
 
+function getMinXGraphValue(data: ChartDataset<"lineWithErrorBars", (number | Point | null)[]>[]): number
+{
+    let minVal = -1;   //this function wont work if 
 
+    data.forEach((data) => {
+        data.data.forEach((point) => {
+            //I know that all the data will be of type 'Point' so I can access the x & y values
+            if(minVal === -1){minVal = point.x}
+            else if(point.x < minVal && point.x !== 0){
+                minVal = point.x;
+            }
+        })
+    });
 
-const LineChartErrorBars = ({ data, options, className, id, eventName }: { data: ChartData<"lineWithErrorBars", (number | Point | null)[], unknown>, options?: ChartOptions, id: string, className?: (string | undefined), eventName: string }): React.JSX.Element => {
+    console.log('minVal x: ', minVal);
+
+    return minVal;
+}
+
+function getMinYGraphValue(data: ChartDataset<"lineWithErrorBars", (number | Point | null)[]>[]): number
+{
+    let minVal = -1;   //this function wont work if 
+
+    data.forEach((data) => {
+        data.data.forEach((point) => {
+            //I know that all the data will be of type 'Point' so I can access the x & y values
+            if(minVal === -1){minVal = point.y}
+            else if(point.y < minVal && point.y !== 0){
+                minVal = point.y;
+            }
+        })
+    });
+
+    console.log('minVal y: ', minVal);
+
+    return minVal;
+}
+
+const LineChartErrorBars = ({ data, options, className, id, eventName }: { data: ChartData<"lineWithErrorBars", (number | Point | null)[], unknown>, options: ChartOptions<'lineWithErrorBars'>, id: string, className?: (string | undefined), eventName: string }): React.JSX.Element => {
 
     //Create the config from the given data & options
+    const [showLine, setShowLine] = useState<boolean>(true);
+    const [showErrorBars, setShowErrorBars] = useState<boolean>(true);
+    Chart.register(zoomPlugin);
+
 
     const config: ChartConfiguration<'lineWithErrorBars'> = useMemo(() => {
+
+        //Check showline
+        if (showLine) {
+            options.showLine = true;
+        }
+        else {
+            options.showLine = false;
+        }
+
+        //Check showErrorBars
+        if (showErrorBars) {
+            // options.datasets.lineWithErrorBars?.errorBarLineWidth = 0.5;
+            options = {
+                ...options,
+                datasets: {
+                    lineWithErrorBars: {
+                        errorBarLineWidth: 0.5,
+                        errorBarWhiskerLineWidth: 0.5,
+                        //this is where styling for the error whiskers can go
+                    }
+                }
+            }
+        }
+        else {
+            options = {
+                ...options,
+                datasets: {
+                    lineWithErrorBars: {
+                        errorBarLineWidth: 0.001,
+                        errorBarWhiskerLineWidth: 0.001,
+                        //this is where styling for the error whiskers can go
+                    }
+                }
+            }
+        }
+
+        const minYVal = getMinYGraphValue(data.datasets);
+
+        //Set the options' min & max values based on the passsed data
+        options = {
+            ...options,
+            scales: {
+                ...options.scales,
+                x: {
+                    ...options.scales.x,
+                    min: Math.round(getMinXGraphValue(data.datasets) - 1),
+                },
+                y: {
+                    ...options.scales.y,
+                    min: minYVal - (minYVal / 2),
+                }
+            }
+        }
+
         return {
             type: 'lineWithErrorBars',
             data: data,
             options: options,
         }
-    }, [data])
+    }, [data, showLine, showErrorBars]);
 
 
+    const [resetZoom, setResetZoom] = useState<boolean>(false);
     let ref = useRef<HTMLCanvasElement & { link: HTMLCanvasElement }>(null)
 
     useEffect(() => {
@@ -37,6 +133,8 @@ const LineChartErrorBars = ({ data, options, className, id, eventName }: { data:
         let canvas = document!.getElementById(id) as HTMLCanvasElement; //Strong typing :OO b carful tommy
         let context: CanvasRenderingContext2D = canvas.getContext('2d') as CanvasRenderingContext2D;
         let lineChart = new LineWithErrorBarsChart(context, config);
+        lineChart.resetZoom();
+
         /*
             Just wanted to take a moment and explain the above for future Tom. Technically it could be written as follows:
                 let context = document.getElementById('line').getContext('2d');
@@ -55,13 +153,28 @@ const LineChartErrorBars = ({ data, options, className, id, eventName }: { data:
             But just incase. >:)
             
             Does this count as rambling to myself? - tom
+
+            coming back later, a simpler check is just that 'if (document is not null){do function}
         */
-    }, [config]); //Important that 'config' is passed here, otherwise the visualisation won't update when the configuration changes
+    }, [config, resetZoom]); //Important that 'config' is passed here, otherwise the visualisation won't update when the configuration changes
 
     const downloadChart = () => {
+
         const link = document.createElement("a");
+        let canvas = ref?.current!
+        let context: CanvasRenderingContext2D = canvas.getContext('2d') as CanvasRenderingContext2D;
+        context.save()
+        
+        context.globalCompositeOperation = "destination-over"
+        context.fillStyle = "white"
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        var image = canvas.toDataURL("image/png")
         link.download = eventName;
-        link.href = ref?.current?.toDataURL("image/png")
+        link.setAttribute('href', image)
+        //link.href = ref?.current?.toDataURL("image/png")
+        context.restore()
+
+
         link.click()
     }
 
@@ -69,13 +182,6 @@ const LineChartErrorBars = ({ data, options, className, id, eventName }: { data:
         // className added for tailwind compatability 
         <div className={className}>
             <canvas id={id} ref={ref}></canvas>
-            {/* 
-            <Button
-                className="ml-6"
-                size="sm"
-                onClick={downloadChart}>
-                Download
-            </Button> */}
             <div className="absolute top-5 right-2 h-16 w-16 z-50">
                 <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
@@ -89,6 +195,27 @@ const LineChartErrorBars = ({ data, options, className, id, eventName }: { data:
                             onClick={downloadChart}
                         >
                             Download Graph Image
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="font-normal text-sm hover:cursor-pointer scale-95 hover:scale-100 transition-all hover:bg-gray-100 p-1 rounded"
+                            onClick={() => {
+                                if (showLine === true) {
+                                    setShowLine(false);
+                                }
+                                else {
+                                    setShowLine(true);
+                                }
+                            }}
+                        >
+                            Toggle Lines
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="font-normal text-sm hover:cursor-pointer scale-95 hover:scale-100 transition-all hover:bg-gray-100 p-1 rounded"
+                            onClick={() => {
+                                setShowErrorBars(!showErrorBars);
+                            }}
+                        >
+                            Toggle Error Bars
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

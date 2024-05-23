@@ -27,7 +27,7 @@ export default async function Page({ params }: {
         <main className='bg-header bg-no-repeat bg-cover bg-center bg-fixed my-0 mx-0 text-center h-max min-h-screen w-full flex flex-col text-white'>
             <div className='z-10 flex flex-col justify-center content-center w-full bg-black/75 px-6 pt-10 rounded flex-1'>
                 <div className='p-10 pb-20 bg-black/85 my-10 mt-0 self-center mx-5 text-justify rounded-xl flex-1'>
-                    <h1 className='text-2xl pb-4 text-center'>{post.title}</h1>
+                    <h1 className='text-2xl pb-4 text-center'>{post.title.split('&%&')[0]}</h1>
                     <Post>{post.body}</Post>
                 </div>
             </div>

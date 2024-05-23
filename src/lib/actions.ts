@@ -5,7 +5,7 @@
 'use server'
 
 import { fetchImageById, fetchObservationById, fetchSelectedEvent, fetchSelectedObservations } from "./data";
-import { CalculateDuration, GetEarliestDate, GetLocalDateFromString, ParseDateString } from "@/lib/form-helpers";
+import { CalculateDuration, GetDateNoTimeFromString, GetEarliestDate, GetLocalDateFromString, ParseDateString } from "@/lib/form-helpers";
 import { DetectionObservationSchema, EventSchema, NonDetectionObservationSchema } from "./validation-schemas";
 import { validationErrors } from "@/components/objects/event";
 import { eventNameRegex } from "./regex";
@@ -15,6 +15,8 @@ import { redirect } from 'next/navigation';
 import crypto from "crypto";
 import { getSignedURL } from "./uploads3";
 import { deleteFile } from "./deletes3";
+import readUserSession from "./auth";
+import { getUserName } from "./authActions/actions";
 
 /****************************************************************************************************************************************
  * ACTION: Create a new entry - This could be either a new event and it's observations, or just new observations for an existing event
@@ -24,7 +26,7 @@ import { deleteFile } from "./deletes3";
 type Observation = {
     parent: string;
     time: Date;
-    endtime: Date;
+    endtime: Date | undefined;
     duration: number;
     frequency: number;
     bandwidth: number;
@@ -37,9 +39,9 @@ type Observation = {
     observer: string;
     burstadvocate: string;
     userid: number;
-    ra: string;
-    dec: string;
-    poser: number;
+    ra: string | undefined;
+    dec: string | undefined;
+    poser: number | undefined;
     data_processor: string;
     fits: FormDataEntryValue | null
 };
@@ -49,14 +51,12 @@ export async function createEntry(rawEntryData: FormData) {
      * 1. Organize raw entry form data into an array of observation subforms FormData objects for easier access to subform data
      *****************************************************************************************************************************/
     // 1.1 Convert FormData entries to an array for easier iteration through each form input field
-    const existingEvent = await fetchSelectedEvent(rawEntryData.get('event')?.toString() ?? ""); // Store existing event record if it's already in the database
     const formDataArray = Array.from(rawEntryData.entries());
 
     // 1.2 Create a separate array to store observation subforms as objects
     const subforms: FormData[] = [];
 
     // 1.3 Iterate through FormData entries and fill up observationSubforms array with subform objects
-    console.log(`EVENT NAME: ${rawEntryData.get('event')}\n`)
 
     for (const [entryformFieldName, value] of formDataArray) {
         // Extract subform field name and subform index from the entryformFieldName, and store values in a regex match array
@@ -90,9 +90,11 @@ export async function createEntry(rawEntryData: FormData) {
     });
 
     /*********************************************************************************************************************************************************************
-     * 2. - Iterate through newly created 'subforms' array, validate each subform field using Zod, and store validated subforms to be added to database
-     *    - Any input validation errors will also be stored in 'subformErrors' array to be returned to entry form, to display
+     * 2. - Determine if new/existing event field inputs are properly validated.
+     *    - Any event field input validation errors will also be stored in 'subformErrors' array to be returned to entry form, to display
      *********************************************************************************************************************************************************************/
+    // const existingEvent = await fetchSelectedEvent(rawEntryData.get('event')?.toString() ?? ""); // Store existing event record if it's already in the database
+
     // Create an array to store successfully validated observation subforms. If all subforms inputs are valid, add events, observations and images to database
     let validObservations: Observation[] = [];
     let allSubformsValid: boolean = true;       // Starts as true. Will only be false if at least 1 subform has invalid inputs
@@ -100,91 +102,188 @@ export async function createEntry(rawEntryData: FormData) {
     // If any form input fields are invalid, store their errors in an array to return back to entry form UI to display
     let subformErrors: validationErrors[] = [];
 
-    // CHECK EVENT NAME FIELD
-    if (!eventNameRegex.test(rawEntryData.get('event')?.toString() ?? "")) {
-        // Set valid flag to 'false' so database call will not occur
-        allSubformsValid = false;
+    // 2.1 First determine the name of the event the user wants to add observation to, and if the event exists already or not
+    const eventExists: boolean = rawEntryData.get('new-event-checkbox') !== 'on';
+    const eventName: string = eventExists ? rawEntryData.get('existing-event') as string : rawEntryData.get('new-event') as string;
 
-        // Store event name validation error
-        subformErrors.push({
-            subformId: 0,
-            field: 'Event Name',
-            message: 'Event name needs to follow the format of 6 consecutive digits, and any sequence of capitals letters (e.g. 240401, 240401A, 240401AB, 240401ABC)'
-        })
+    // console.log(rawEntryData);
+
+    // 2.2 Based on whether the event exists or not, apply the appropriate input validation to ensure the corresponding event name fields have correct values provided
+    if (!eventExists) {
+        // 2.2.1 Check if new event name meets valid event name criteria
+        if (!eventNameRegex.test(rawEntryData.get('new-event')?.toString() ?? "")) {
+            // Set valid flag to 'false' so database call will not occur
+            allSubformsValid = false;
+
+            // Store event name validation error
+            subformErrors.push({
+                subformId: 0,
+                field: 'New Event Name',
+                message: 'New event name needs to follow the format of 6 consecutive digits, and any sequence of capitals letters (e.g. 240401, 240401A, 240401AB, 240401ABC)'
+            })
+        } else {
+            // 2.2.2 In the case the provided new event name is in a valid event name format, check if the number portion of the string matches the new event start date
+
+            // Date object based on provided new event date string
+            const newEventDate: Date | null = GetDateNoTimeFromString(rawEntryData.get('new-event-date') as string)
+
+            // If the new event date string can be converted into a valid Date object, check if it's values match the event name date values
+            if (newEventDate !== null && !isNaN(newEventDate?.getDate())) {
+                // console.log(`Valid date for checking against start date: ${newEventDate}`)
+
+                // Extract the 6-digit number portion of the event name, and the string of the provided new event date
+                const datePartOfName = rawEntryData.get('new-event')?.slice(0, 6);
+                const newDateString = rawEntryData.get('new-event-date') as string;
+
+                // From the new event date string, store the day, month and last two digits of the year into separate variables
+                const [day, month, year] = newDateString.split('/');
+                const lastTwoYear = year.toString().slice(2, 4);
+
+                // Create a Date object from the 6-digit number portion of the provided new event name
+                const nameYear = datePartOfName?.slice(0, 2);
+                const nameMonth = datePartOfName?.slice(2, 4);
+                const nameDay = datePartOfName?.slice(4, 6);
+
+                // console.log(day, month, lastTwoYear);
+                // console.log(nameDay, nameMonth, nameYear);
+
+                if (
+                    day === nameDay &&
+                    month === nameMonth &&
+                    lastTwoYear === nameYear
+                ) {
+                    // console.log(`NAME MATCHES START DATE`);
+                } else {
+                    // console.log(`Name and date for new event dont match`);
+                    // Set valid flag to 'false' so database call will not occur
+                    allSubformsValid = false;
+
+                    // Store event name validation error
+                    subformErrors.push({
+                        subformId: 0,
+                        field: 'New Event Name and Date Mismatch',
+                        message: `Date portion of the new event name must match the provided new event date value. (Currently ${nameDay}/${nameMonth}/${nameYear} doesn't equal ${day}/${month}/${lastTwoYear})`
+                    })
+                }
+            }
+        }
+
+        // Check if new event date is provided
+        if (rawEntryData.get('new-event-date') === '') {
+            // Set valid flag to 'false' so database call will not occur
+            allSubformsValid = false;
+
+            // Store event name validation error
+            subformErrors.push({
+                subformId: 0,
+                field: 'New Event Date',
+                message: 'Provide a valid start date for new event.'
+            })
+        }
+
+        // Check if new event time is provided
+        if (rawEntryData.get('new-event-time') === '') {
+            // Set valid flag to 'false' so database call will not occur
+            allSubformsValid = false;
+
+            // Store event name validation error
+            subformErrors.push({
+                subformId: 0,
+                field: 'New Event Time',
+                message: 'Provide a valid start time for new event.'
+            })
+        }
+    } else if (eventExists) {
+        // Check if new event date is provided
+        if (!rawEntryData.get('existing-event')) {
+            // Set valid flag to 'false' so database call will not occur
+            allSubformsValid = false;
+
+            // Store event name validation error
+            subformErrors.push({
+                subformId: 0,
+                field: 'Select Existing Event',
+                message: 'Select an existing event to add an observation to.'
+            })
+        }
     }
 
-    // CHECK ALL SUBFORM FIELDS
-    subforms.forEach((subform, subformIndex) => {
-        // 2.1 Create Date objects for current subform, based on the subform's separate start/end date and time fields
-        const startDate = GetLocalDateFromString(`${subform.get('startDate')} ${subform.get('startTime')}`);
-        const endDate = GetLocalDateFromString(`${subform.get('endDate')} ${subform.get('endTime')}`);
+    // console.log(eventExists ? `EXISTS: ${eventName}!!` : `DOESNT EXIST: ${eventName} !!`);
 
-        // 2.2 If event exists already, make sure observation's startDate is equal to or later than event's current start date
-        if (existingEvent != null) {
-            if (startDate < existingEvent.date) {
+    /*********************************************************************************************************************************************************************
+     * 3. - Iterate through newly created 'subforms' array, validate each subform field using Zod, and store validated subforms to be added to database
+     *    - Any subform input validation errors will also be stored in 'subformErrors' array to be returned to entry form, to display
+     *********************************************************************************************************************************************************************/
+    subforms.forEach((subform, subformIndex) => {
+        // 3.1 Store a valid observation end date if provided, else leave endDate and duration as 'nullish' values
+        const startDate = GetLocalDateFromString(`${subform.get('startDate')} ${subform.get('startTime')}`);
+        let endDate: Date | undefined = undefined;
+        let duration: number = -1;
+
+        if (subform.get('endDate') == '' || subform.get('endTime') == '') {
+            // console.log('Not a valid end date');
+
+            // This placeholder end date is created to provide an end date to the observation that is 12 hrs ahead of the start time, if user doesn't provide an end date
+            // This ensures that a delta-t value can still be calculated for graphing purposes
+            let placeholderEndDate: Date = new Date(startDate);
+            placeholderEndDate.setHours(placeholderEndDate.getHours() + 12);
+            endDate = placeholderEndDate;
+            duration = CalculateDuration(startDate, endDate);
+        } else {
+            endDate = GetLocalDateFromString(`${subform.get('endDate')} ${subform.get('endTime')}`);
+            duration = CalculateDuration(startDate, endDate);
+
+            // 3.2 Check if endDate is later than or equal to startDate
+            if (endDate < startDate) {
                 // Set valid flag to 'false' so database call will not occur
                 allSubformsValid = false;
 
-                // Add 'observation start date being earlier than existing event date' error to subformErrors array
+                // Add 'end date being earlier than start date' error to subformErrors array
                 subformErrors.push({
                     subformId: subformIndex + 1,    // +1 because subform index starts at 0, but subforms should be shown to user starting from 1
-                    field: 'Start Date',
-                    message: `Observation 'Start Date' must be equal to or later than parent event '${existingEvent.name}' start date: ${existingEvent.date.toString()}.`
+                    field: 'End Date',
+                    message: 'End Date must be equal to or later than Start Date'
                 })
             }
         }
 
-        // 2.3 Check if endDate is later than or equal to startDate
-        if (endDate < startDate) {
-            // Set valid flag to 'false' so database call will not occur
-            allSubformsValid = false;
-
-            // Add 'end date being earlier than start date' error to subformErrors array
-            subformErrors.push({
-                subformId: subformIndex + 1,    // +1 because subform index starts at 0, but subforms should be shown to user starting from 1
-                field: 'End Date',
-                message: 'End Date must be equal to or later than Start Date'
-            })
-        }
-
-        // 2.4 If startDate and endDate are valid, calculate duration
-        const duration = CalculateDuration(startDate, endDate);
-
-        // 2.5 Create an observation object to be validated by Zod observation schema
+        // 3.4 Create an observation object to be validated by Zod observation schema
         const observation: Observation = {
             parent: rawEntryData.get('event')?.toString() ?? "",
             time: startDate,
             endtime: endDate,
-            duration: duration,
-            frequency: subform.get('frequency') ? parseFloat(subform.get('frequency')?.toString() ?? '') : -1,
-            bandwidth: subform.get('bandwidth') ? parseFloat(subform.get('bandwidth')?.toString() ?? '') : -1,
+            duration: Number.isNaN(duration) ? -1 : duration,
+            frequency: subform.get('frequency') ? parseFloat(subform.get('frequency')?.toString() ?? '') : 0,
+            bandwidth: subform.get('bandwidth') ? parseFloat(subform.get('bandwidth')?.toString() ?? '') : 0,
             configuration: subform.get('configuration')?.toString() ?? "",
             detection: (subform.get('detection') === 'on') ? true : false,
-            flux: subform.get('fluxDensity') ? parseFloat(subform.get('fluxDensity')?.toString() ?? '') : -1,
-            fluxerror: subform.get('uncertainty') ? parseFloat(subform.get('uncertainty')?.toString() ?? '') : -1,
-            rms: subform.get('rms') ? parseFloat(subform.get('rms')?.toString() ?? '') : -1,
+            flux: subform.get('fluxDensity') ? parseFloat(subform.get('fluxDensity')?.toString() ?? '') : 0,
+            fluxerror: subform.get('uncertainty') ? parseFloat(subform.get('uncertainty')?.toString() ?? '') : 0,
+            rms: subform.get('rms') ? parseFloat(subform.get('rms')?.toString() ?? '') : 0,
             notes: subform.get('notes')?.toString() ?? "",
             observer: subform.get('observer')?.toString() ?? "",          // Enter from Supabase client?
             burstadvocate: subform.get('advocate')?.toString() ?? "",
             userid: 1,                                                    // Enter id from Supabase client
-            ra: subform.get('RA')?.toString() ?? "",
-            dec: subform.get('dec')?.toString() ?? "",
-            poser: subform.get('posEr') ? parseFloat(subform.get('posEr')?.toString() ?? '') : -1,
+            ra: subform.get('RA')?.toString() || undefined,
+            dec: subform.get('dec')?.toString() || undefined,
+            poser: subform.get('posEr') ? parseFloat(subform.get('posEr')?.toString() ?? '') : undefined,
             data_processor: subform.get('dataProcessor')?.toString() ?? "",
             fits: subform.get('fits')
         }
 
-        // 2.6 Use appropriate validation schema based on observation detection, and retrieve result of the Zod observation check
+        // console.log(observation);
+
+        // 3.5 Use appropriate validation schema based on observation detection, and retrieve result of the Zod observation check
         let validationResult = null;
         if (observation.detection === true) {
             // DETECTION SCHEMA
-            validationResult = DetectionObservationSchema.omit({ parent: true }).safeParse(observation);
+            validationResult = DetectionObservationSchema.omit({ parent: true, duration: true }).safeParse(observation);
         } else {
             // NON DETECTION SCHEMA
-            validationResult = NonDetectionObservationSchema.omit({ parent: true }).safeParse(observation);
+            validationResult = NonDetectionObservationSchema.omit({ parent: true, duration: true }).safeParse(observation);
         }
 
-        // 2.7 If observation passes validation check, store validated observation. If failed, store validation error to be returned to frontend
+        // 3.6 If observation passes validation check, store validated observation. If failed, store validation error to be returned to frontend
         if (!validationResult.success) {
             // Set valid flag to 'false' so database call will not occur
             allSubformsValid = false;
@@ -198,58 +297,61 @@ export async function createEntry(rawEntryData: FormData) {
             })
             // console.log(`Observation ${subformIndex} INVALID:\n ${validationResult.error.issues.forEach((issue) => { console.log(issue) })}`)
         } else {
-            console.log(`Observation ${subformIndex} VALID`)
+            // console.log(`Observation ${subformIndex} VALID`)
             validObservations.push(observation);
         }
 
-        console.log('\n Number of valid observation forms: ' + validObservations.length);
+        // console.log('\n Number of valid observation forms: ' + validObservations.length);
     })
 
     // subformErrors.forEach(error => { console.log(error) });
 
     /*****************************************************************************************************************************************************************************
-     * 3. At this point, either all form data is validated and ready to be sent to database. If not, return all validation error messages to entry form, so user can fix input values
+     * 4. At this point, either all form data is validated and ready to be sent to database. If not, return all validation error messages to entry form, so user can fix input values
      *****************************************************************************************************************************************************************************/
     if (allSubformsValid == false) {
-        console.log("INVALID DATA - WONT SEND TO DB");
+        // console.log("INVALID DATA - WONT SEND TO DB");
         return {
             success: false,
             databaseErrors: "",
             subformErrors: subformErrors,
         }
     } else if (validObservations.length > 0) {
-        console.log("ALL DATA VALID - SEND DATA TO DB");
-        // 3.1 Check if event already exists in database. Create new event if it doesn't exist
-        let selectedEvent = await fetchSelectedEvent(rawEntryData.get('event')?.toString() ?? "");
+        // console.log("ALL DATA VALID - SEND DATA TO DB");
+        // 4.1 Check if event already exists in database. Create new event if it doesn't exist
+        let eventExistCheck = await fetchSelectedEvent(eventName);
 
-        // 3.2 If event doesn't exist, create new event and add to database
-        if (selectedEvent == null) {
-            selectedEvent = {
-                name: rawEntryData.get('event')?.toString() ?? "",
-                date: GetEarliestDate(validObservations),
-                creator: "Placeholder Creator from 'createEntry' Server Action"
-            }
+        // 4.2 If event doesn't exist, create new event and add to database
+        // Get current logged in user's name
+        const session = await readUserSession();
+        const loggedUsername = (await getUserName(session.data.user?.id ?? "Creator Not Found")).role;
 
+        if (eventExistCheck == null) {
+            // Add new event record to database
             try {
                 const createdEvent = await prisma.events.create({
-                    data: selectedEvent
+                    data: {
+                        name: eventName,
+                        date: GetLocalDateFromString(`${rawEntryData.get('new-event-date')} ${rawEntryData.get('new-event-time')}`),
+                        creator: loggedUsername as string
+                    }
                 })
-                console.log(`Created New Event: ${createdEvent.name}`);
+                // console.log(`Created New Event: ${createdEvent.name}`);
             } catch (e) {
                 return {
                     success: false,
-                    databaseErrors: `Could not add event ${selectedEvent.name} to database.`,
+                    databaseErrors: `Could not add event ${eventName} to database.`,
                     subformErrors: subformErrors,
                 }
             }
         }
 
-        // 3.3 After adding event to database, start adding each observation record to the database for the specified event
+        // 4.3 After adding event to database, start adding each observation record to the database for the specified event
         validObservations.forEach(async (o, observationIndex) => {
             try {
                 const createdObservation = await prisma.observations.create({
                     data: {
-                        parent: selectedEvent.name,
+                        parent: eventName,
                         time: o.time,
                         endtime: o.endtime,
                         duration: o.duration,
@@ -263,17 +365,17 @@ export async function createEntry(rawEntryData: FormData) {
                         notes: o.notes,
                         observer: o.observer,
                         burstadvocate: o.burstadvocate,
-                        username: 'supabase username here', //o.userid,
-                        ra: o.ra,
-                        dec: o.dec,
-                        poser: o.poser,
+                        username: loggedUsername as string,
+                        ra: o.ra?.toString() ?? "",
+                        dec: o.dec?.toString() ?? "",
+                        poser: o.poser ?? 0,
                         data_processor: o.data_processor,
                     }
                 })
 
-                console.log(`Created new observation '${createdObservation.observation_id}' for ${createdObservation.parent}`);
+                // console.log(`Created new observation '${createdObservation.observation_id}' for ${createdObservation.parent}`);
 
-                // 3.4 After receiving observation success response (createdObservation), upload FITS file to S3, and store observation id and FITS signed URL into a prisma 'images' record
+                // 4.4 After receiving observation success response (createdObservation), upload FITS file to S3, and store observation id and FITS signed URL into a prisma 'images' record
 
                 // use createdObservation.observation_id and o.fits
                 if (o.fits instanceof File && o.fits.name !== 'undefined') {
@@ -286,11 +388,11 @@ export async function createEntry(rawEntryData: FormData) {
                     const key2 = keyname()
                     //create key filename without.fits_key then .fits at end
                     const key = `${fileNameWithoutExtension}_${key2}.fits`;
-                    console.log(key)
-                    console.log(fileNameWithoutExtension)
+                    // console.log(key)
+                    // console.log(fileNameWithoutExtension)
                     try {
                         const s3Response = await getSignedURL(fitsFile, key)
-                        console.log('File uploaded succesfully to S3 with: ', key)
+                        // console.log('File uploaded succesfully to S3 with: ', key)
                         try {
                             const createdImage = await prisma.images.create({
                                 data: {
@@ -299,9 +401,9 @@ export async function createEntry(rawEntryData: FormData) {
                                     file_name: fitsFile.name //need to test more
                                 }
                             });
-                            console.log(`Image record created with ID: ${createdImage.image_id}`);
+                            // console.log(`Image record created with ID: ${createdImage.image_id}`);
                         } catch (dbError) {
-                            console.error("Error inserting image record into database:", dbError);
+                            // console.error("Error inserting image record into database:", dbError);
                             return {
                                 success: false,
                                 databaseErrors: 'Could not insert image record into database for observation',
@@ -320,15 +422,21 @@ export async function createEntry(rawEntryData: FormData) {
             } catch (error) {
                 return {
                     success: false,
-                    databaseErrors: `Could not add observation ${observationIndex} for event '${selectedEvent.name}' to database.`,
+                    databaseErrors: `Could not add observation ${observationIndex} for event '${eventName}' to database.`,
                     subformErrors: subformErrors,
                 }
             }
         })
 
-        // 3.5 After uploading new event and/or observation records to database, revalidate corresponding event pages cache to load new event data, and redirect user
-        revalidatePath(`/dashboard/graph/${selectedEvent.name}`);
-        redirect(`/dashboard/graph/${selectedEvent.name}`);
+        // // 4.5 After uploading new event and/or observation records to database, revalidate corresponding event pages cache to load new event data, and redirect user
+        revalidatePath(`/dashboard/graph/${eventName}`);
+        redirect(`/dashboard/graph/${eventName}`);
+
+        // return {
+        //     success: false,
+        //     databaseErrors: `Testing form`,
+        //     subformErrors: subformErrors,
+        // }
     } else {
 
         // If allSubformsValid is true but there are no observation forms provided, return an error to tell user to add at least 1 complete observation form
@@ -367,78 +475,77 @@ export async function updateObservation(id: number, rawObservationData: FormData
     let subformErrors: validationErrors[] = []; // If any form input fields are invalid, store their errors in an array to return back to entry form UI to display
     let allSubformsValid: boolean = true;       // Starts as true. Will only be false if at least 1 subform has invalid inputs
 
-    // 1.3 Create Date objects for observation to be updated, based on the update form's separate start/end date and time fields
+    // 1.3 Store a valid observation end date if provided, else leave endDate and duration as 'nullish' values
     const startDate = GetLocalDateFromString(`${rawObservationData.get('startDate')} ${rawObservationData.get('startTime')}`);
-    const endDate = GetLocalDateFromString(`${rawObservationData.get('endDate')} ${rawObservationData.get('endTime')}`);
+    let endDate: Date | undefined = undefined;
+    let duration: number = -1;
 
-    // 1.4 If event exists already, make sure observation's startDate is equal to or later than event's current start date
-    if (existingEvent != null) {
-        if (startDate < existingEvent.date) {
+    if (rawObservationData.get('endDate') == '' || rawObservationData.get('endTime') == '') {
+        // console.log('Not a valid end date');
+
+        // This placeholder end date is created to provide an end date to the observation that is 12 hrs ahead of the start time, if user doesn't provide an end date
+        // This ensures that a delta-t value can still be calculated for graphing purposes
+        let placeholderEndDate: Date = new Date(startDate);
+        placeholderEndDate.setHours(placeholderEndDate.getHours() + 12);
+        endDate = placeholderEndDate;
+        duration = CalculateDuration(startDate, endDate);
+    } else {
+        endDate = GetLocalDateFromString(`${rawObservationData.get('endDate')} ${rawObservationData.get('endTime')}`);
+        duration = CalculateDuration(startDate, endDate);
+
+        // Check if endDate is later than or equal to startDate
+        if (endDate < startDate) {
             // Set valid flag to 'false' so database call will not occur
             allSubformsValid = false;
 
-            // Add 'observation start date being earlier than existing event date' error to subformErrors array
+            // Add 'end date being earlier than start date' error to subformErrors array
             subformErrors.push({
                 subformId: 1,    // Set to '1', because update form is only dealing with 1 observation form
-                field: 'Start Date',
-                message: `Observation 'Start Date' must be equal to or later than parent event '${existingEvent.name}' start date: ${existingEvent.date.toString()}.`
+                field: 'End Date',
+                message: 'End Date must be equal to or later than Start Date'
             })
         }
     }
 
-    // 1.5 Check if endDate is later than or equal to startDate
-    if (endDate < startDate) {
-        // Set valid flag to 'false' so database call will not occur
-        allSubformsValid = false;
+    // console.log(`UPDATED END DATE: ${endDate}`)
 
-        // Add 'end date being earlier than start date' error to subformErrors array
-        subformErrors.push({
-            subformId: 1,    // Set to '1', because update form is only dealing with 1 observation form
-            field: 'End Date',
-            message: 'End Date must be equal to or later than Start Date'
-        })
-    }
-
-    // 1.6 If startDate and endDate are valid, calculate duration
-    const duration = CalculateDuration(startDate, endDate);
-
-    // 1.7 Create an observation object to be validated by Zod observation schema
+    // 1.4 Create an observation object to be validated by Zod observation schema
     const observation: Observation = {
         parent: existingEvent?.name ?? "",
         time: startDate,
         endtime: endDate,
-        duration: duration,
-        frequency: rawObservationData.get('frequency') ? parseFloat(rawObservationData.get('frequency')?.toString() ?? '') : -1,
-        bandwidth: rawObservationData.get('bandwidth') ? parseFloat(rawObservationData.get('bandwidth')?.toString() ?? '') : -1,
+        duration: Number.isNaN(duration) ? -1 : duration,
+        frequency: rawObservationData.get('frequency') ? parseFloat(rawObservationData.get('frequency')?.toString() ?? '') : 0,
+        bandwidth: rawObservationData.get('bandwidth') ? parseFloat(rawObservationData.get('bandwidth')?.toString() ?? '') : 0,
         configuration: rawObservationData.get('configuration')?.toString() ?? "",
         detection: (rawObservationData.get('detection') === 'on') ? true : false,
-        flux: rawObservationData.get('flux') ? parseFloat(rawObservationData.get('flux')?.toString() ?? '') : -1,
-        fluxerror: rawObservationData.get('fluxError') ? parseFloat(rawObservationData.get('fluxError')?.toString() ?? '') : -1,
-        rms: rawObservationData.get('RMS') ? parseFloat(rawObservationData.get('RMS')?.toString() ?? '') : -1,
+        flux: rawObservationData.get('flux') ? parseFloat(rawObservationData.get('flux')?.toString() ?? '') : 0,
+        fluxerror: rawObservationData.get('fluxError') ? parseFloat(rawObservationData.get('fluxError')?.toString() ?? '') : 0,
+        rms: rawObservationData.get('RMS') ? parseFloat(rawObservationData.get('RMS')?.toString() ?? '') : 0,
         notes: rawObservationData.get('notes')?.toString() ?? "",
         observer: rawObservationData.get('observer')?.toString() ?? "",          // Enter from Supabase client?
         burstadvocate: rawObservationData.get('burstAdvocate')?.toString() ?? "",
         userid: 1,                                                    // Enter id from Supabase client
-        ra: rawObservationData.get('RA')?.toString() ?? "",
-        dec: rawObservationData.get('dec')?.toString() ?? "",
-        poser: rawObservationData.get('posEr') ? parseFloat(rawObservationData.get('posEr')?.toString() ?? '') : -1,
+        ra: rawObservationData.get('RA')?.toString() || undefined,
+        dec: rawObservationData.get('dec')?.toString() || undefined,
+        poser: rawObservationData.get('posEr') ? parseFloat(rawObservationData.get('posEr')?.toString() ?? '') : undefined,
         data_processor: rawObservationData.get('dataProcessor')?.toString() ?? "",
         fits: rawObservationData.get('fits')
     }
 
-    // console.log(observation);
+    // console.log('Update Observation', observation);
 
-    // 1.8 Use appropriate validation schema based on observation detection, and retrieve result of the Zod observation check
+    // 1.5 Use appropriate validation schema based on observation detection, and retrieve result of the Zod observation check
     let validationResult = null;
     if (observation.detection === true) {
         // DETECTION SCHEMA
-        validationResult = DetectionObservationSchema.omit({ parent: true }).safeParse(observation);
+        validationResult = DetectionObservationSchema.omit({ parent: true, duration: true }).safeParse(observation);
     } else {
         // NON DETECTION SCHEMA
-        validationResult = NonDetectionObservationSchema.omit({ parent: true }).safeParse(observation);
+        validationResult = NonDetectionObservationSchema.omit({ parent: true, duration: true }).safeParse(observation);
     }
 
-    // 1.9 If observation passes validation check, store validated observation. If failed, store validation error to be returned to frontend
+    // 1.6 If observation passes validation check, store validated observation. If failed, store validation error to be returned to frontend
     if (!validationResult.success) {
         // Set valid flag to 'false' so database call will not occur
         allSubformsValid = false;
@@ -456,10 +563,10 @@ export async function updateObservation(id: number, rawObservationData: FormData
     }
 
     /************************************************************************************************************************************************************************************************************************
-     * 3. At this point, either all form data for updating observation is validated and ready to be sent to database. If not, return all validation error messages to update observation form, so user can fix input values
+     * 2. At this point, either all form data for updating observation is validated and ready to be sent to database. If not, return all validation error messages to update observation form, so user can fix input values
      ************************************************************************************************************************************************************************************************************************/
     if (allSubformsValid == false) {
-        console.log('UPDATE FORM INVALID');
+        // console.log('UPDATE FORM INVALID');
         return {
             success: false,
             databaseErrors: "",
@@ -467,7 +574,7 @@ export async function updateObservation(id: number, rawObservationData: FormData
         }
     } else {
         try {
-            // 3.1 First update the observation record in 'observations' table in database
+            // 2.1 First update the observation record in 'observations' table in database
             const updated = await prisma.observations.update({
                 where: {
                     observation_id: oldObservation?.observation_id
@@ -487,43 +594,43 @@ export async function updateObservation(id: number, rawObservationData: FormData
                     notes: observation.notes,
                     observer: observation.observer,
                     burstadvocate: observation.burstadvocate,
-                    username: 'UPDATED supabase username here', //o.userid,
-                    ra: observation.ra,
-                    dec: observation.dec,
-                    poser: observation.poser,
+                    username: oldObservation?.username,
+                    ra: observation.ra ?? "",
+                    dec: observation.dec ?? "",
+                    poser: observation.poser ?? 0,
                     data_processor: observation.data_processor,
                 }
             })
 
             // After updating observation, check if FITS file needs to be updated
 
-            // 3.2 Retrieve current image record for the updated observation id, if it has one
+            // 2.2 Retrieve current image record for the updated observation id, if it has one
             const oldImage = await fetchImageById(updated.observation_id);
-            console.log('Old Image for updated observation:', oldImage);
+            // console.log('Old Image for updated observation:', oldImage);
 
-            // 3.3 If user has provided a FITS file in update form, store the File object
+            // 2.3 If user has provided a FITS file in update form, store the File object
             const updateFitsFile = rawObservationData.get('fits');
             if (updateFitsFile instanceof File) {
                 const updateFitsFileObject: File = updateFitsFile;
-                console.log('Provided Fits file in update form: ' + updateFitsFileObject.name);
-                console.log('Current assigned Fits file to observation that was updated: ' + oldImage?.file_name);
+                // console.log('Provided Fits file in update form: ' + updateFitsFileObject.name);
+                // console.log('Current assigned Fits file to observation that was updated: ' + oldImage?.file_name);
                 // If provided File object name is null, dont update anything
                 if (updateFitsFileObject.name !== 'undefined') {
                     //console.log("Real file here")
                     if (oldImage === null) {
-                        console.log("Old file null just upload new file")
+                        // console.log("Old file null just upload new file")
                         const fileNameParts = updateFitsFileObject.name.split('.');
                         const fileNameWithoutExtension = fileNameParts[0];
                         const keyname = (bytes = 32) => crypto.randomBytes(bytes).toString("hex")
                         const key2 = keyname()
                         //const key = key2.concat('.fits')
                         const key = `${fileNameWithoutExtension}_${key2}.fits`;
-                        console.log(fileNameWithoutExtension)
-                        console.log(key)
-                        console.log("Uploading file and creating new image entry", updateFitsFileObject.name)
+                        // console.log(fileNameWithoutExtension)
+                        // console.log(key)
+                        // console.log("Uploading file and creating new image entry", updateFitsFileObject.name)
                         try {
                             const s3Response = await getSignedURL(updateFitsFile, key)
-                            console.log('File uploaded succesfully to S3 with: ', key)
+                            // console.log('File uploaded succesfully to S3 with: ', key)
                             try {
                                 const createdImage = await prisma.images.create({
                                     data: {
@@ -532,9 +639,9 @@ export async function updateObservation(id: number, rawObservationData: FormData
                                         file_name: updateFitsFileObject.name //need to test more
                                     }
                                 });
-                                console.log(`Image record created with ID: ${createdImage.image_id}`);
+                                // console.log(`Image record created with ID: ${createdImage.image_id}`);
                             } catch (dbError) {
-                                console.error("Error inserting image record into database:", dbError);
+                                // console.error("Error inserting image record into database:", dbError);
                                 return {
                                     success: false,
                                     databaseErrors: 'Could not insert image record into database for observation',
@@ -552,23 +659,23 @@ export async function updateObservation(id: number, rawObservationData: FormData
 
                         //If file names are DIFFERNT then make changes and update, if the same do nothing again
                     } else if (updateFitsFileObject.name !== oldImage?.file_name) {
-                        console.log("Files have differnt names make changes")
+                        // console.log("Files have differnt names make changes")
                         const fileNameParts = updateFitsFileObject.name.split('.');
                         const fileNameWithoutExtension = fileNameParts[0];
                         const keyname = (bytes = 32) => crypto.randomBytes(bytes).toString('hex');
                         const Key2 = keyname();
                         //const newKey = Key2.concat('.fits')
                         const newKey = `${fileNameWithoutExtension}_${Key2}.fits`;
-                        console.log(fileNameWithoutExtension)
-                        console.log(newKey)
+                        // console.log(fileNameWithoutExtension)
+                        // console.log(newKey)
 
                         try {
                             //Delete file first from S3
                             await deleteFile(oldImage.key);
-                            console.log("old file deleted from S3", oldImage.key)
+                            // console.log("old file deleted from S3", oldImage.key)
                             //Now upload the new File with new Key
                             const s3response = await getSignedURL(updateFitsFile, newKey)
-                            console.log('File uploaded succesfully to S3 with: ', newKey)
+                            // console.log('File uploaded succesfully to S3 with: ', newKey)
 
                             //Now UPDATE the images table with new file name and new key
                             const updatedImage = await prisma.images.update({
@@ -580,10 +687,10 @@ export async function updateObservation(id: number, rawObservationData: FormData
                                     file_name: updateFitsFileObject.name,
                                 },
                             });
-                            console.log('Images table updated with new file name and key:', updatedImage);
+                            // console.log('Images table updated with new file name and key:', updatedImage);
 
                         } catch (error) {
-                            console.error("Error uploading file to S3 or updating file")
+                            // console.error("Error uploading file to S3 or updating file")
                         }
 
                     }
@@ -619,7 +726,7 @@ export async function updateObservation(id: number, rawObservationData: FormData
  * Reference: https://nextjs.org/learn/dashboard-app/mutating-data#deleting-an-invoice
  ****************************************************************************************************************************************/
 export async function deleteEvent(eventToDelete: string, rawDeleteEventData: FormData) {
-    console.log(`Deleting Event: ${eventToDelete}`)
+    // console.log(`Deleting Event: ${eventToDelete}`)
 
     // 1. Fetch all of this event's observations first
     const observations = await fetchSelectedObservations(eventToDelete);
@@ -630,10 +737,10 @@ export async function deleteEvent(eventToDelete: string, rawDeleteEventData: For
         //console.log(`Observation Image: ${index} - ${image}`);
         //delete if image exists
         if (image) {
-            console.log(`image to delete, ${image} ${image.key}`);
+            // console.log(`image to delete, ${image} ${image.key}`);
             try {
                 await deleteFile(image.key);
-                console.log(`Deleted file from S3: ${image.key}`);
+                // console.log(`Deleted file from S3: ${image.key}`);
             } catch (error) {
                 console.error(`Failed to delete file from S3: ${image.key}`, error);
                 throw new Error(`Failed to delete file from S3: ${image.key}`);
@@ -651,7 +758,7 @@ export async function deleteEvent(eventToDelete: string, rawDeleteEventData: For
             }
         })
 
-        console.log(`Deleted Event '${deletedEvent.name}' - All it's observations and image records will be deleted too`)
+        // console.log(`Deleted Event '${deletedEvent.name}' - All it's observations and image records will be deleted too`)
     } catch (error) {
         throw Error(`Couldn't delete event: ${eventToDelete}`);
     }
@@ -666,7 +773,7 @@ export async function deleteEvent(eventToDelete: string, rawDeleteEventData: For
  * Reference: https://nextjs.org/learn/dashboard-app/mutating-data#deleting-an-invoice
  ****************************************************************************************************************************************/
 export async function deleteObservation(id: number, rawDeleteObservationData: FormData) {
-    console.log(`Deleting Observation: ${id}`);
+    // console.log(`Deleting Observation: ${id}`);
 
     // 1. Fetch all of this event's observations first
     const observation = await fetchObservationById(id);
@@ -677,9 +784,9 @@ export async function deleteObservation(id: number, rawDeleteObservationData: Fo
         //console.log(`Deleting file from S3: ${image.key}`);
         try {
             await deleteFile(image.key);
-            console.log(`Deleted file from S3: ${image.key}`);
+            // console.log(`Deleted file from S3: ${image.key}`);
         } catch (error) {
-            console.error(`Failed to delete file from S3: ${image.key}`, error);
+            // console.error(`Failed to delete file from S3: ${image.key}`, error);
             throw new Error(`Failed to delete file from S3: ${image.key}`);
         }
     }
@@ -694,7 +801,7 @@ export async function deleteObservation(id: number, rawDeleteObservationData: Fo
             }
         })
 
-        console.log(`Deleted Observation '${deletedObservation.observation_id}' - Any associated image record for this observation will be deleted too`)
+        // console.log(`Deleted Observation '${deletedObservation.observation_id}' - Any associated image record for this observation will be deleted too`)
     } catch (error) {
         throw Error(`Couldn't delete observation: ${observation?.observation_id}`);
     }

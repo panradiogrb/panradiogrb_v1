@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.533.0",
@@ -35,6 +36,7 @@
     "add": "^2.0.6",
     "chart.js": "^4.4.2",
     "chartjs-chart-error-bars": "^4.4.0",
+    "chartjs-plugin-zoom": "^2.0.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",

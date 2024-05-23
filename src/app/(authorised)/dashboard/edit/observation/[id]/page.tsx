@@ -2,7 +2,7 @@
 import * as React from 'react';
 import "react-datepicker/dist/react-datepicker.css";
 import { BsDatabaseFillAdd } from "react-icons/bs";
-import UpdateObservation from './update-from';
+import UpdateObservation from '@/components/forms/edit/update-from';
 import { Observation, GammaEvent } from "@/components/objects/event";
 import { fetchGammaEvents, fetchObservationById, fetchSelectedObservations } from '@/lib/data';
 

@@ -281,6 +281,33 @@ export const researcherColumns: ColumnDef<Observation>[] = [
         header: 'Input User'
     },
     {
+        id: 'RA',
+        accessorKey: 'RA',
+        header: 'RA (hh:mm:ss.ss)',
+        cell: (({ row }) => {
+            if (row.getValue('RA') == '00:00:00.00' || row.getValue('RA') === '') {
+                return '-'
+            }
+            return row.getValue('RA');
+        })
+    },
+    {
+        id: 'dec',
+        accessorKey: 'dec',
+        header: 'Dec (dd:mm:ss.ss)',
+        cell: (({ row }) => {
+            if (row.getValue('dec') == '00:00:00.00' || row.getValue('dec') === '') {
+                return '-'
+            }
+            return row.getValue('RA');
+        })
+    },
+    {
+        id: 'posEr',
+        accessorKey: 'posEr',
+        header: 'Positional Error (arcsec)',
+    },
+    {
         id: "actions",
         cell: ({ row }) => {
             const observation: Observation = row.original;
@@ -555,6 +582,33 @@ export const colleagueColumns: ColumnDef<Observation>[] = [
         id: 'burstAdvocate',
         accessorKey: 'burstAdvocate',
         header: 'Burst Advocate',
+    },
+    {
+        id: 'RA',
+        accessorKey: 'RA',
+        header: 'RA (hh:mm:ss.ss)',
+        cell: (({ row }) => {
+            if (row.getValue('RA') == '00:00:00.00' || row.getValue('RA') === '') {
+                return '-'
+            }
+            return row.getValue('RA');
+        })
+    },
+    {
+        id: 'dec',
+        accessorKey: 'dec',
+        header: 'Dec (dd:mm:ss.ss)',
+        cell: (({ row }) => {
+            if (row.getValue('dec') == '00:00:00.00' || row.getValue('dec') === '') {
+                return '-'
+            }
+            return row.getValue('dec');
+        })
+    },
+    {
+        id: 'posEr',
+        accessorKey: 'posEr',
+        header: 'Positional Error (arcsec)',
     },
     {
         id: 'userId',

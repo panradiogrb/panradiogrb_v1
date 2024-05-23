@@ -83,6 +83,9 @@ export function GetDataTable<TData, TValue>({
         'observer': false,
         'burstAdvocate': false,
         'userId': false,
+        'RA': false,
+        'dec': false,
+        'posEr': false,
     })
 
 
@@ -230,6 +233,7 @@ function DataTable<TData, TValue>({
                                 (column) => column.getCanHide()
                             )
                             .map((column) => {
+                                if(column.id !== 'actions'){
                                 return (
                                     <DropdownMenuCheckboxItem
                                         key={column.id}
@@ -241,7 +245,11 @@ function DataTable<TData, TValue>({
                                     >
                                         {column.id}
                                     </DropdownMenuCheckboxItem>
-                                )
+                                )}
+                                else
+                                {
+                                    return (<></>)
+                                }
                             })}
                     </DropdownMenuContent>
                 </DropdownMenu>

@@ -20,17 +20,17 @@ export default async function UnauthorisedLayout({
     userRole = roleResult.role === 'researcher' ? 'Researcher' : 'Colleague';
     userName = nameResult.role;
   }
-  console.log("in laoyout", userRole, userName)
-  
+  // console.log("in layout", userRole, userName)
+
 
   return (
-        <div
-          className={
-            "bg-custom-image2 bg-no-repeat bg-cover bg-center bg-fixed flex flex-row w-full h-max text-black"
-          }>
-          <div className="fixed bg-violet-950 bg-opacity-25  bg-cover w-full h-screen grid"></div>
-          <DashboardNavbar loggedUserName={userName} loggedUserRole={userRole}></DashboardNavbar>
-          {children}
-        </div>
+    <div
+      className={
+        "bg-custom-image2 bg-no-repeat bg-cover bg-center bg-fixed flex flex-row w-full h-max text-black"
+      }>
+      <div className="fixed bg-violet-950 bg-opacity-25  bg-cover w-full h-screen grid"></div>
+      <DashboardNavbar loggedUserName={userName} loggedUserRole={userRole}></DashboardNavbar>
+      {children}
+    </div>
   );
 }

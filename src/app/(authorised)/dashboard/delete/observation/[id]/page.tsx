@@ -27,8 +27,8 @@ export default async function DeleteObservation({ params }: { params: { id: stri
 
                     <div className=" bg-black rounded-t-lg top-0 w-full h-6 drop-shadow-2xl shadow-2xl shadow-black min-h-6 -translate-y-1"></div>
 
-            {/* BACK TO EVENT BUTTON */}
-            {/* <div className="flex my-4 ml-8 ">
+                    {/* BACK TO EVENT BUTTON */}
+                    {/* <div className="flex my-4 ml-8 ">
                 <Link href={`/dashboard/graph/${observation?.parent}`}
                 >
                     <Button className=" bg-white drop-shadow rounded-md focus:outline-none w-20  text-black border duration-150 hover:shadow-stone-300 hover:shadow-sm hover:border-gray-400 shadow focus:border-gray-700 focus:duration-300 transition-all ">
@@ -36,59 +36,59 @@ export default async function DeleteObservation({ params }: { params: { id: stri
                     </Button>
                 </Link>
             </div> */}
-            <div className='flex flex-col  w-9/12 h-3/6 my-10 rounded-md mx-auto'>
+                    <div className='flex flex-col  w-9/12 h-3/6 my-10 rounded-md mx-auto'>
 
 
-            <h1 className=' text-4xl text-red-500 text-center font-extrabold p-10'>WARNING - OBSERVATION DELETE</h1>
-            <div className='text-center'>
-                You are about to delete an observation which contains the following information:
-            </div>
+                        <h1 className=' text-4xl text-red-500 text-center font-extrabold p-10'>WARNING - OBSERVATION DELETE</h1>
+                        <div className='text-center'>
+                            You are about to delete an observation which contains the following information:
+                        </div>
 
-            {/* OBSERVATION FIELDS OF OBSERVATION TO BE DELETED */}
-            <div className="flex justify-center items-center">
-                <div className='m-5  '>
-                    <div><span className='font-bold'>Event</span> : <span>{observation?.parent}</span></div>
-                    <div><span className='font-bold'>Observer</span> : <span>{observation?.observer}</span></div>
-                    <div><span className='font-bold'>Burst Advocate</span> : <span>{observation?.burstadvocate}</span></div>
-                    <div><span className='font-bold'>Data Processor</span> : <span>{observation?.data_processor}</span></div>
-                    <div><span className='font-bold'>Observation Creator</span> : <span>{observation?.username}</span></div>
-                    <div><span className='font-bold'>Observation Start Time</span> : <span>{observation?.time.toString()}</span></div>
-                    <div><span className='font-bold'>Observation End Time</span> : <span>{observation?.endtime.toString()}</span></div>
-                    <div><span className='font-bold'>Duration</span> : <span>{observation?.duration.toNumber()}</span></div>
-                    <div><span className='font-bold'>Frequency</span> : <span>{observation?.frequency.toNumber()}</span></div>
-                    <div><span className='font-bold'>Bandwidth</span> : <span>{observation?.bandwidth.toNumber()}</span></div>
-                    <div><span className='font-bold'>Configuration</span> : <span>{observation?.configuration}</span></div>
-                    <div><span className='font-bold'>Detection</span> : <span>{observation?.detection === true ? 'True' : 'False'}</span></div>
-                    <div><span className='font-bold'>Flux</span> : <span>{observation?.flux.toNumber()}</span></div>
-                    <div><span className='font-bold'>Flux Error</span> : <span>{observation?.fluxerror.toNumber()}</span></div>
-                    <div><span className='font-bold'>RMS</span> : <span>{observation?.rms.toNumber()}</span></div>
-                    <div><span className='font-bold'>RA</span> : <span>{observation?.ra}</span></div>
-                    <div><span className='font-bold'>DEC</span> : <span>{observation?.dec}</span></div>
-                    <div><span className='font-bold'>Positional Error</span> : <span>{observation?.poser.toNumber()}</span></div>
-                    <div><span className='font-bold'>Notes</span> : <span>{observation?.notes}</span></div>
+                        {/* OBSERVATION FIELDS OF OBSERVATION TO BE DELETED */}
+                        <div className="flex justify-center items-center">
+                            <div className='m-5  '>
+                                <div><span className='font-bold'>Event</span> : <span>{observation?.parent}</span></div>
+                                <div><span className='font-bold'>Observer</span> : <span>{observation?.observer}</span></div>
+                                <div><span className='font-bold'>Burst Advocate</span> : <span>{observation?.burstadvocate}</span></div>
+                                <div><span className='font-bold'>Data Processor</span> : <span>{observation?.data_processor}</span></div>
+                                <div><span className='font-bold'>Observation Creator</span> : <span>{observation?.username}</span></div>
+                                <div><span className='font-bold'>Observation Start Time</span> : <span>{observation?.time.toString()}</span></div>
+                                <div><span className='font-bold'>Observation End Time</span> : <span>{observation?.endtime === null ? '-' : observation?.endtime.toString()}</span></div>
+                                <div><span className='font-bold'>Duration</span> : <span>{observation?.duration.toNumber() === -1 ? 'No duration - observation has no end time currently.' : `${observation?.duration.toNumber()} seconds`}</span></div>
+                                <div><span className='font-bold'>Frequency</span> : <span>{observation?.frequency.toNumber()}</span></div>
+                                <div><span className='font-bold'>Bandwidth</span> : <span>{observation?.bandwidth.toNumber()}</span></div>
+                                <div><span className='font-bold'>Configuration</span> : <span>{observation?.configuration}</span></div>
+                                <div><span className='font-bold'>Detection</span> : <span>{observation?.detection === true ? 'True' : 'False'}</span></div>
+                                <div><span className='font-bold'>Flux</span> : <span>{observation?.flux.toNumber()}</span></div>
+                                <div><span className='font-bold'>Flux Error</span> : <span>{observation?.fluxerror.toNumber()}</span></div>
+                                <div><span className='font-bold'>RMS</span> : <span>{observation?.rms.toNumber()}</span></div>
+                                <div><span className='font-bold'>RA</span> : <span>{observation?.ra}</span></div>
+                                <div><span className='font-bold'>DEC</span> : <span>{observation?.dec}</span></div>
+                                <div><span className='font-bold'>Positional Error</span> : <span>{observation?.poser.toNumber()}</span></div>
+                                <div><span className='font-bold'>Notes</span> : <span>{observation?.notes}</span></div>
+                            </div>
+                        </div>
+
+                        <div className='text-center p-10 text-red-600 font-bold'>Are you sure you want to delete the following observation from event {observation?.parent}?</div>
+
+                        <div className='flex flex-row gap-5 m-5 justify-start font-normal drop-shadow-2xl content-baseline'>
+                            <Link href={`/dashboard/graph/${observation?.parent}`}>
+                                <Button className='duration-150 hover:shadow-stone-300 hover:shadow-md hover:border-black shadow focus:border-black focus:duration-300 transition-all '>
+                                    Cancel
+                                </Button>
+                            </Link>
+
+                            <form action={deleteObservationById} className='scale-90 ml-auto'>
+                                <Button className=' bg-red-600 text-white duration-150 hover:shadow-stone-300 hover:shadow-md hover:border-black shadow focus:border-black focus:duration-300 transition-all  '>
+                                    Delete
+                                </Button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
+
             </div>
 
-            <div className='text-center p-10 text-red-600 font-bold'>Are you sure you want to delete the following observation from event {observation?.parent}?</div>
-
-            <div className='flex flex-row gap-5 m-5 justify-start font-normal drop-shadow-2xl content-baseline'>
-                <Link href={`/dashboard/graph/${observation?.parent}`}>
-                    <Button className='duration-150 hover:shadow-stone-300 hover:shadow-md hover:border-black shadow focus:border-black focus:duration-300 transition-all '>
-                        Cancel
-                    </Button>
-                </Link>
-
-                <form action={deleteObservationById} className='scale-90 ml-auto'>
-                    <Button className=' bg-red-600 text-white duration-150 hover:shadow-stone-300 hover:shadow-md hover:border-black shadow focus:border-black focus:duration-300 transition-all  '>
-                        Delete
-                    </Button>
-                </form>
-            </div>
-        </div>
-        </div>
-
-        </div>
-
-</main>
+        </main>
     )
 }

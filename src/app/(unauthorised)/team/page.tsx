@@ -36,7 +36,7 @@ export default function Home() {
 
 
 
-            <div className="sm:mt-0 mt-8 sm:border-t-0 border-t-white border-t-2 border-t-solid -bottom-2 left-0 w-full h-fit bg-black p-2 sm:p-0 z-10">
+            <div className="sm:mt-0  sm:border-t-0 border-t-black border-t-2 border-t-solid -bottom-2 left-0 w-full h-fit bg-black p-2 sm:p-0 z-10">
                 <p className="text-white text-center my-3 text-sm sm:text-base">
                     We acknowledge the Gomeroi people as the Traditional Owners of the Observatory site of the Australia Telescope Compact Array.
                 </p>

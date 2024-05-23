@@ -23,29 +23,29 @@ model images {
 }
 
 model observations {
-  observation_id Int      @id @default(autoincrement())
-  parent         String   @db.VarChar(255)
-  time           DateTime @db.Timestamp(6)
-  endtime        DateTime @db.Timestamp(6)
-  duration       Decimal  @db.Decimal
-  frequency      Decimal  @db.Decimal
-  bandwidth      Decimal  @db.Decimal
-  configuration  String   @db.VarChar(255)
+  observation_id Int       @id @default(autoincrement())
+  parent         String    @db.VarChar(255)
+  time           DateTime  @db.Timestamp(6)
+  endtime        DateTime? @db.Timestamp(6)
+  duration       Decimal   @db.Decimal
+  frequency      Decimal   @db.Decimal
+  bandwidth      Decimal   @db.Decimal
+  configuration  String    @db.VarChar(255)
   detection      Boolean
-  flux           Decimal  @db.Decimal
-  fluxerror      Decimal  @db.Decimal
-  rms            Decimal  @db.Decimal
+  flux           Decimal   @db.Decimal
+  fluxerror      Decimal   @db.Decimal
+  rms            Decimal   @db.Decimal
   notes          String
-  observer       String   @db.VarChar(255)
-  burstadvocate  String   @db.VarChar(255)
-  username       String   @db.VarChar(255)
-  ra             String   @db.VarChar(255)
-  dec            String   @db.VarChar(255)
-  poser          Decimal  @db.Decimal
+  observer       String    @db.VarChar(255)
+  burstadvocate  String    @db.VarChar(255)
+  username       String    @db.VarChar(255)
+  ra             String    @db.VarChar(255)
+  dec            String    @db.VarChar(255)
+  poser          Decimal   @db.Decimal
   fits           String?
-  data_processor String?  @db.VarChar(255)
+  data_processor String?   @db.VarChar(255)
   images         images[]
-  events         events   @relation(fields: [parent], references: [name], onDelete: Cascade, map: "fk_events")
+  events         events    @relation(fields: [parent], references: [name], onDelete: Cascade, map: "fk_events")
 }
 
 model postimages {

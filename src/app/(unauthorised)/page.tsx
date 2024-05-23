@@ -13,10 +13,10 @@ export default function Home() {
   return (
     <main className='bg-gradient-to-t to-black via-black from-home-purple w-full min-h-screen flex flex-col'>
 
-      <div className='flex justify-center w-full'>
+      {/* <div className='flex justify-center w-full'>
 
         <Image
-          className=' z-10 translate-y-28 max-h-[15.5rem] w-full'
+          className=' z-10 translate-y-28 max-h-[15.5rem]  w-full'
           src={"/upscaledbanner.png"}
           alt={""}
           fill={true}
@@ -31,37 +31,54 @@ export default function Home() {
           height={25}
         >
         </Image>
+      </div> */}
+
+      <div className='flex justify-center w-full relative'>
+        {/* <div className='w-full h-[15.5rem] lg:h-[15.5rem]  min-[853px]:h-[11.5rem] sm:h-[9.5rem] min-[689px]:h-[7.5rem]  min-[320px]:h-[4.5rem] relative'> */}
+        <div className='w-full  lg:h-[14.5rem] min-[853px]:h-[10.5rem]  sm:h-[7.5rem]  min-[320px]:h-[4.5rem] relative'>
+
+          <Image
+            className='z-10 w-full h-full object-cover'
+            src={"/upscaledbanner.png"}
+            alt={""}
+            fill={true}
+          />
+        </div>
       </div>
 
 
-      <div className='flex flex-row'>
-        <section className='text-white opacity-80 pt-20 pl-16'>
-          <h1 className='text-xl font-semibold -translate-x-4 pb-2'>Quick Links</h1>
+      <div className='flex lg:flex-row md:flex-row min-[320px]:flex-col'>
+        <section className=' text-white opacity-80 md:pt-20 pl-16 md:self-auto self-center md:px-0 px-10 md:order-first md:ml-10   '>
+          <h1 className='p-6  text-xl font-semibold -translate-x-4 pb-2  text-center '>Quick Links</h1>
           <ul className=''>
             <li>
-              <Link className='hover:underline flex flex-row gap-2' href='https://github.com/tvtom99/PanradioGRB'>
-                <FaGithub className='translate-y-1' />
-                <p>PanRadioGRB Github</p>
+              <Link className='hover:underline flex flex-row gap-2 ' href='https://github.com/tvtom99/PanradioGRB'>
+                <FaGithub className='translate-y-1 ' />
+                <p className="">PanRadioGRB Github</p>
               </Link>
             </li>
+          
             <li>
-              <Link href='mailto:gemma.anderson@curtin.edu.au' className='hover:underline flex flex-row gap-2'>
+              <Link href='mailto:gemma.anderson@curtin.edu.au' className='hover:underline flex flex-row gap-2 '>
                 <MdEmail className='translate-y-1' />
                 <p>Reach Gemma Anderson</p>
               </Link>
             </li>
+            <li>
+              <Link className='hover:underline flex flex-row gap-2 ' href='https://ui.adsabs.harvard.edu/'>
+              <Image className=' -mx-1 ' src={"/ads.png"}  width={25} height={5} alt={""}/>
+                <p className="">Astrophysics Data System</p>
+              </Link>
+            </li>
           </ul>
         </section>
-        <section className='text-white grid grid-cols-2 justify-items-center pt-20 flex-1 text-justify gap-y-5 gap-x-16 px-16 pb-16'>
-          <h1 className='text-purple-text font-semibold text-4xl'>
-            ABOUT US
-          </h1>
+        <section className='text-white grid grid-cols-1  lg:grid-cols-2 justify-items-center md:pt-20 pt-10 flex-1 text-justify gap-y-5 gap-x-16 px-16 pb-16 '>
 
-          <h1 className='text-purple-text font-semibold text-4xl'>
-            OUR MISSION
-          </h1>
 
           <div>
+          <h1 className='text-purple-text font-semibold text-4xl p-5 text-center'>
+            ABOUT US
+          </h1>
             The PanRadio GRB project seeks to study the radio light (afterglow) emitted by gamma-ray bursts (GRBs) using the<span> </span>
             <Link className='hover:underline text-space-purple' href='https://www.narrabri.atnf.csiro.au/'>CSIRO Australia Telescope Compact Array (ATCA)</Link>.
             PanRadio GRB falls under the Australia Telescope National Facility <span> </span>
@@ -80,8 +97,12 @@ export default function Home() {
             <Link className='hover:underline text-space-purple' href='https://www.mpi-hd.mpg.de/hfm/HESS/pages/about/telescopes/'>High Energy Stereoscopic System (H.E.S.S.)</Link>, and the <span> </span>
             <Link className='hover:underline text-space-purple' href='https://www.almaobservatory.org/en/home/'>Atacama Large Millimeter/submillimeter Array (ALMA)</Link>.
           </div>
-
+          
           <div className='flex justify-center flex-col content-center'>
+          <h1 className='text-purple-text font-semibold text-4xl p-5 text-center'>
+            OUR MISSION
+          </h1>
+
             PanRadio GRB will perform the first comprehensive radio survey of GRBs, the most powerful explosions in the Universe. In the 25+ years following the discovery of the first afterglow, few GRBs have comprehensive enough radio monitoring to provide a complete understanding of what drives these explosions and how they interact with the surrounding environment. Our goal is to obtain the most comprehensive and unbiased dataset of GRB radio afterglows from minutes to years post-burst by observing all GRB detected by Swift in the Southern Hemisphere.
             <Image
               className="rounded-3xl self-center p-3"

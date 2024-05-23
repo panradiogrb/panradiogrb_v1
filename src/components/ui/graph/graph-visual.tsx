@@ -1,11 +1,13 @@
 'use client'
 
 import 'chart.js/auto';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { GammaEvent } from "../../objects/event";
 import LineChartErrorBars from './line-graph-error-bars';
 import SpectrumChart from './spectrum-graph-visual';
-import { GetLineGraphData, GetLineGraphOptions } from './visual-helpers';
+import { GetLineGraphData, GetLineGraphOptions, layout } from './visual-helpers';
+
+
 
 //GraphVisual   -   React.JSX.Element
 //  -------------------
@@ -13,25 +15,54 @@ import { GetLineGraphData, GetLineGraphOptions } from './visual-helpers';
 //It is not a constant so that it can be updated with a new event if the user would like to cut specific observations out from being viewed.
 
 
-const GraphVisual = ({ event }: { event: GammaEvent }): React.JSX.Element => {
+const GraphVisual = ({ event, layout }: { event: GammaEvent, layout: layout }): React.JSX.Element => {
     const data = useMemo(() => {
         return GetLineGraphData(event);
     }, [event])
 
     const lOptions = useMemo(() => {
-        return GetLineGraphOptions(event);
+        return GetLineGraphOptions(event, true);
     }, [event]);
 
+
     return (
-        <div className="px-6 w-full h-full flex flex-row flex-1 justify-evenly">
-            <div className="flex-1 px-2 h-72 sm:h-96">
-                <LineChartErrorBars eventName={event.name + "_Light-Graph"} data={data} options={lOptions} id='firstchart' className="p-4 max-w-full w-full h-full flex-1 drop-shadow-md rounded-2xl bg-slate-50 border-solid border-gray-300 border-2 text-center self-center"></LineChartErrorBars>
-            </div>
-            <div className="flex-1 px-2 h-72 sm:h-96 <--(this shouldnt be hardcoded but it is for now cause it works)">
-                <SpectrumChart className="p-4 max-w-full w-full h-full flex-1 drop-shadow-md rounded-2xl bg-slate-50 border-solid border-gray-300 border-2 text-center self-center" event={event}></SpectrumChart>
-                
-            </div>
-        </div >
+        <>
+            <div className={
+                layout === 'h'
+                    ?
+                    "w-full h-full flex flex-col flex-1 justify-evenly"
+                    :
+                    "w-full h-full flex flex-row flex-1 justify-evenly"
+            }>
+                <div className="p-6 aspect-video">
+                    <LineChartErrorBars
+                        eventName={event.name + "_Light-Graph"}
+                        data={data}
+                        options={lOptions}
+                        id='firstchart'
+                        className={
+                            layout === 'h'
+                                ?
+                                "p-4 max-w-full w-full h-full flex-1 drop-shadow-md rounded-2xl bg-slate-50 border-solid border-gray-300 border-2 text-center self-center"
+                                :
+                                "p-4 h-[400px] w-[600px] flex-1 drop-shadow-md rounded-2xl bg-slate-50 border-solid border-gray-300 border-2 text-center self-center"
+                        }>
+                    </LineChartErrorBars>
+                </div>
+                <div className="p-6 aspect-video">
+                    <SpectrumChart
+                        className={
+                            layout === 'h'
+                                ?
+                                "p-4 max-w-full w-full h-full flex-1 drop-shadow-md rounded-2xl bg-slate-50 border-solid border-gray-300 border-2 text-center self-center"
+                                :
+                                "p-4 h-[400px] w-[600px] flex-1 drop-shadow-md rounded-2xl bg-slate-50 border-solid border-gray-300 border-2 text-center self-center"
+                        }
+                        event={event}>
+                    </SpectrumChart>
+                </div>
+            </div >
+        </>
     );
 }
 

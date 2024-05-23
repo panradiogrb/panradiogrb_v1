@@ -19,6 +19,8 @@ export default async function DatabasePage() {
     view: `graph/${event.name}`
   }));
 
+  events.sort((a,b) => b.date.getTime() - a.date.getTime());
+
   return (
     <main className="bg-custom-image2 bg-no-repeat bg-cover bg-center bg-fixed flex flex-row w-full h-max">
       <div className="h-full mx-8 flex-1 z-10 flex flex-col">

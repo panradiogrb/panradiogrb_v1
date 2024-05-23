@@ -19,7 +19,7 @@ export default async function Home() {
 
             {/* POSTS SECTION */}
             <h1 className='text-3xl z-10 font-semibold'>POSTS</h1>
-            <div className="w-full flex flex-col text-white font-bold items-end z-10 gap-10 pb-20 px-20 pt-10 flex-1">
+            <div className="w-full flex flex-col text-white font-bold items-end z-10 gap-10 pb-20 sm:px-20 px-5 pt-10 flex-1">
 
                 {posts.length === 0 ? (<div>no posts</div>) :
                     (posts
@@ -27,12 +27,18 @@ export default async function Home() {
                             new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map((post) => (
                             <article key={post.slug} className='self-center bg-black/85 p-10 rounded-xl'>
-                                <Link href={`/science/${post.slug}`} className='p-10 w-full flex flex-row gap-10'>
+                                <Link href={`/science/${post.slug}`} className='p-5 sm:p-10 w-full flex flex-col sm:flex-row gap-10'>
                                     <div className='content-center'>
-                                        <h1 className='text-xl'>{post.title}</h1>
-                                        <p className='text-sm scale-90 opacity-85'>{post.date}</p>
-                                        <p className='text-base'>{post.description}</p>
+                                        <h1 className='text-xl py-3'>{post.title.split('&%&')[0]}</h1>
+                                        <p className='sm:text-sm  text-xs scale-90 opacity-85'>{post.date}</p>
+                                        <p className='sm:text-base text-sm'>{post.description}</p>
                                     </div>
+                                    {post.title.includes('&%&')
+                                        ?
+                                        <img className='sm:max-w-72 border border-solid border-white' src={`${post.title.split('&%&')[1]}`} alt={`${post.slug} Image`}></img>
+                                        :
+                                        <></>
+                                    }
                                 </Link>
                             </article>
                         )))
@@ -43,7 +49,7 @@ export default async function Home() {
             {/* PUBLICATIONS SECTION */}
             <div className="w-full text-white items-end z-10 bg-black/75 text-center pb-16">
                 <h1 className='text-3xl z-10 font-semibold py-3 pb-4'>PUBLICATIONS</h1>
-                <ul className='list-disc text-justify px-20'>
+                <ul className='list-disc text-justify sm:px-20 p-10'>
                     <li>
                         Levan et al. (2024), <Link className='hover:underline text-purple-text' href='https://ui.adsabs.harvard.edu/abs/2024Natur.626..737L/abstract'>Heavy-element production in compact object merger observed by JWST</Link>, Nature, 626, 737, <Link className='hover:underline text-purple-text' href='https://ui.adsabs.harvard.edu/link_gateway/2024Natur.626..737L/doi:10.1038/s41586-023-06759-1'>DOI: 10.1038/s41586-023-06759-1</Link>
                     </li>
@@ -62,7 +68,7 @@ export default async function Home() {
                 </ul>
             </div>
 
-            <div className="sm:mt-0 mt-8 sm:border-t-0 border-t-white border-t-2 border-t-solid -bottom-2 left-0 w-full h-fit bg-black p-2 sm:p-0 z-10">
+            <div className="sm:mt-0  sm:border-t-0 border-t-black border-t-2 border-t-solid -bottom-2 left-0 w-full h-fit bg-black p-2 sm:p-0 z-10">
                 <p className="text-white text-center my-3 text-sm sm:text-base">
                     We acknowledge the Gomeroi people as the Traditional Owners of the Observatory site of the Australia Telescope Compact Array.
                 </p>

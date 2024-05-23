@@ -66,9 +66,17 @@ export function DataTable<TData, TValue>({
     React.useState<VisibilityState>({
       'creator': false,
     })
+    
+  const [reversedData, setReversedData] = React.useState([]);
+
+  // Reverse table data so newest entries are shown first
+  React.useEffect(() => {
+    setReversedData(data.slice());
+  }, [data]);
+
 
   const table = useReactTable({
-    data,
+    data: reversedData, // Reverse the order of the data array
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

@@ -62,7 +62,7 @@ export default function LoginDialog() {
                 <button
                     type="button"
                     onClick={OpenModal}
-                    className="sm:float-right hover:opacity-100 opacity-10 hover:text-space-purple hover:scale-110 transition-all"
+                    className="sm:float-right hover:opacity-100 sm:opacity-100 opacity-10 hover:text-space-purple hover:scale-110 transition-all"
                 >
                     Log In
                 </button>
@@ -91,7 +91,7 @@ export default function LoginDialog() {
                                 enterTo="opacity-100 scale-100"
                                 leave="ease-in duration-200"
                                 leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95 -translate-y-full"
+                                leaveTo=" scale-95 -translate-y-full"
                             >
                                 <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
                                     <Dialog.Title
@@ -144,6 +144,14 @@ export default function LoginDialog() {
                                             >
                                                 Cancel
                                             </button>
+                                        </div>
+                                        <div className="mt-4 flex justify-center">
+                                            <a
+                                                href="/email"
+                                                className="text-sm text-blue-500 hover:underline"
+                                            >
+                                                Forgot Password?
+                                            </a>
                                         </div>
                                     </form>
 

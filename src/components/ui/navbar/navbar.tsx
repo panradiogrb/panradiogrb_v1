@@ -53,9 +53,16 @@ import { RiCalendarEventFill } from "react-icons/ri";
           </Image>
 
           <div className='my-5 flex justify-center items-center flex-col'>
-            <h1 className="text-white  text-base group-hover:text-xl transition-all font-semibold hover:cursor-default">
+            <Link href='/dashboard/user'
+           
+            >
+
+            <h1 className="text-white  text-base group-hover:text-xl transition-all font-semibold hover:text-fuchsia-500">
               {userName}
             </h1>
+            </Link>
+
+            
 
             <div className='text-xs text-slate-400 font-extralight hover:cursor-default'>
               {userLevel}
@@ -86,6 +93,7 @@ import { RiCalendarEventFill } from "react-icons/ri";
 
           </Link>
 
+          {userLevel === 'Researcher' && (
           <Link href='/dashboard/entry'
             className=
             {
@@ -103,7 +111,7 @@ import { RiCalendarEventFill } from "react-icons/ri";
               New
             </h1>
           </Link>
-
+          )}
 
           <Link href={"/dashboard/graph/" + curEvent}
             className=
