@@ -145,7 +145,7 @@ const GraphController = ({ event, userRole }: { event: GammaEvent, userRole: str
                         >
                             Update Visualisation
                         </Button>
-                        <Button
+                        {/* <Button
                             className="ml-6"
                             variant="outline"
                             size="sm"
@@ -161,7 +161,7 @@ const GraphController = ({ event, userRole }: { event: GammaEvent, userRole: str
                             }}
                         >
                             Clear Visualisation
-                        </Button>
+                        </Button> */}
                     </div>
 
                 </div>)
