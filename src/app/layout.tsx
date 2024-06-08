@@ -20,6 +20,9 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={"!overflow-y-auto !p-0"}>
+      <head>
+        <meta name="google-site-verification" content="c-cubwLfO2cj1DDdT0tkUIv7IszeckNwDlEMx2VZMtI" />
+      </head>
       <body className={`${bodyStyle} text-black`}>
         {children}
       </body>
